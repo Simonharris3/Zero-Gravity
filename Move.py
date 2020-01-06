@@ -78,13 +78,16 @@ class Move:
     def deactivate(self):
         self.hitboxActive = False
 
-class Hitbox:
+class Hitbox(pygame.sprite.Sprite):
     def __init__(self, points, damage, knockback, angle, move):
         self.shape = points
         self.damage = damage
         self.knockback = knockback
         self.angle = angle  # knockback angle
         self.move = move
+        self.char = self.move.char
+        # self.rect = (self.char.currSprite[0] + self.shape[0][0], self.char.currSprite[1] + self.shape[1][1],
+        #              self.shape[2][0] - self.shape[0][0], self.shape[3][1] - self.shape[1][1] )
 
     # def move(self, x, y):
     #     self.rect = self.rect.move(x, y)
