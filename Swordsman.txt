@@ -1,0 +1,74 @@
+Speed: 6
+Mass: 3
+Health: 80
+Air speed: 3
+Sprites: alucardfinal.png
+Default sprite: xpos ypos xlen ylen hurtbox_xpos hurtbox_ypos hurtbox_xlen hurtbox_ylen
+40 180 130 111
+Wall sprite: xpos ypos xlen ylen hurtbox_xpos hurtbox_ypos hurtbox_xlen hurtbox_ylen
+170 40 120 75
+
+Neutral A:
+Frame data: Active Inactive End
+10 25 50
+Damage 3
+Knockback 7
+Angle 90
+Hitboxes: 1 (xpos ypos xlen ylen)
+135 5 80 15
+Sprites: xpos ypos xlen ylen
+235 1650 190 97
+
+Forward A:
+Frame data: Active Inactive End
+5 15 40
+Damage 2
+Knockback 3
+Angle 45
+Hitboxes: 5 (xpos ypos xlen ylen)
+135 10 0 0
+135 10 0 0
+135 10 80 10
+135 10 0 0
+135 10 0 0
+Sprites: xpos ypos xlen ylen
+44 4304 103 129
+150 4312 140 118
+326 4324 193 109
+203 4443 118 111
+44 4440 143 102
+
+Back A:
+Frame data: Active Inactive End
+10 25 50
+Damage 3
+Knockback 7
+Angle 270
+Hitboxes: 1 (xpos ypos xlen ylen)
+-10 5 80 15
+Sprites: xpos ypos xlen ylen
+368 659 178 127
+
+Up A:
+Frame data: Active Inactive End
+5 10 25
+Damage 1
+Knockback 6
+Angle 120
+Hitboxes: 1 (xpos ypos xlen ylen)
+55 25 80 20
+Sprites: xpos ypos xlen ylen
+157 2235 136 110
+
+Down A:
+Frame data: Active Inactive End
+10 40 60
+Damage 8
+Knockback 20
+Angle 0
+Hitboxes: 2 (xpos ypos xlen ylen)
+0 0 0 0
+95 98 15 26
+Sprites: xpos ypos xlen ylen
+197 514 119 103
+47 510 116 125
