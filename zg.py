@@ -1,6 +1,6 @@
 # TODO LIST:
 #          Implement tether, shield, and midair boost
-#          Figure out how to detect collisions using polygon hitboxes
+#          Switch from using pixel arrays to just masks for hitboxes
 #          Allow characters to move out of corners more easily
 #          Look into flipping characters' direction
 #          Character and stage select screen
@@ -170,8 +170,8 @@ class ZeroGravity:
                 c_x = self.controller.get_axis(C_STICK_HORIZONTAL)
                 c_y = self.controller.get_axis(C_STICK_VERTICAL)
 
-                if control_x > 0.1 or control_x < -0.1 or control_y > 0.1 or control_y < -0.1:
-                    print("Control stick values: (%f, %f)" % (control_x, control_y))
+                # if control_x > 0.1 or control_x < -0.1 or control_y > 0.1 or control_y < -0.1:
+                    # print("Control stick values: (%f, %f)" % (control_x, control_y))
 
                 self.joystickMoved(control_x, control_y, c_x, c_y)
 
@@ -186,7 +186,7 @@ class ZeroGravity:
             if walls:
                 # if player 1's character is on a wall and a direction is inputted,
                 if self.stage.checkWalls(joystickAngle(controlX, controlY), walls, self.playChars[0]):
-                    print("Joystick angle: " + str(joystickAngle(controlX, controlY)))
+                    # print("Joystick angle: " + str(joystickAngle(controlX, controlY)))
                     self.playChars[0].jump(joystickAngle(controlX, controlY))
                     # if the player angles away from the wall, that character jumps off the wall
 
@@ -310,6 +310,7 @@ class ZeroGravity:
 
     def detectCollisions(self):  # see if a character has collided with a wall (other character)
         for char in self.playChars:  # for every character playing,
+            # TODO: use mask to check if
             collided = char.rect.collidelist(self.stage.walls)
             # if char == self.playChars[0] and collided == 2:
             #     print("collided with right wall")
@@ -330,23 +331,16 @@ class ZeroGravity:
                         # if char == self.playChars[0]:
                         #   print("x: %d, y:%d" % (char.pos[0], char.pos[1]))
 
-            # TODO: move to the character's update function
-            # if char.onWall:
-            #     if (('right' in sides and char.xVelocity > 0) or ('down' in sides and char.yVelocity > 0) or
-            #             ('left' in sides and char.xVelocity < 0) or ('up' in sides and char.yVelocity < 0)):
-            #         print("leaving wall")
-            #         print("Collided: " + str(collided))
-            #         char.leaveWall()  # if the character leaves the wall, it is not longer considered on the wall
-
             for c2 in self.playChars:
                 if c2 is not char:
                     for hitbox in char.hitboxes:
-                        if c2.rect.colliderect(hitbox.shape):
+                        if pygame.sprite.collide_mask(hitbox, c2):
                             c2.hit(hitbox)  # the character gets hit
                             char.currMove.deactivate()  # deactivate the hitbox so it doesn't keep hitting
 
-                    if pygame.sprite.collide_mask(char, c2):
-                        print("character collision")
+                    # TODO: handle collison
+                    # if pygame.sprite.collide_mask(char, c2):
+                        # print("character collision")
 
     def end(self, loser):
         print("Player %d wins!" % ((loser.player + 1) % 2 + 1))

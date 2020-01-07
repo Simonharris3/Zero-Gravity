@@ -1,5 +1,5 @@
 Speed: 6
-Mass: 3
+Mass: 0.9
 Health: 80
 Air speed: 3
 Sprites: alucardfinal.png
@@ -14,29 +14,37 @@ Frame data: Active Inactive End
 Damage 3
 Knockback 7
 Angle 90
-Hitboxes: 1 (xpos ypos xlen ylen)
-135 5 80 15
+Hitboxes: 1 (xpos ypos xlen ylen) If isolateHitbox is true, the next line is the color to isolate
+375 1655 80 15 False
 Sprites: xpos ypos xlen ylen
 235 1650 190 97
 
 Forward A:
 Frame data: Active Inactive End
-5 15 40
+5 19 40
 Damage 2
 Knockback 3
 Angle 45
-Hitboxes: 5 (xpos ypos xlen ylen)
-135 10 0 0
-135 10 0 0
-135 10 80 10
-135 10 0 0
-135 10 0 0
+Hitboxes: 7 (xpos ypos xlen ylen isolateHitbox) If isolateHitbox is true, the next line is the color to isolate
+0 0 0 0 False
+0 0 0 0 False
+262 3914 33 46 True
+230 230 230
+453 3894 55 24 True
+230 230 230
+140 3983 54 25 True
+230 230 230
+245 3987 37 39 True
+230 230 230
+0 0 0 0 False
 Sprites: xpos ypos xlen ylen
-44 4304 103 129
-150 4312 140 118
-326 4324 193 109
-203 4443 118 111
-44 4440 143 102
+191 3739 117 121
+30 3870 140 89
+194 3866 115 102
+314 3867 193 108
+9 3965 185 125
+222 3987 127 154
+380 4007 123 101
 
 Back A:
 Frame data: Active Inactive End
@@ -44,8 +52,8 @@ Frame data: Active Inactive End
 Damage 3
 Knockback 7
 Angle 270
-Hitboxes: 1 (xpos ypos xlen ylen)
--10 5 80 15
+Hitboxes: 1 (xpos ypos xlen ylen) If isolateHitbox is true, the next line is the color to isolate
+358 661 80 15 False
 Sprites: xpos ypos xlen ylen
 368 659 178 127
 
@@ -55,8 +63,8 @@ Frame data: Active Inactive End
 Damage 1
 Knockback 6
 Angle 120
-Hitboxes: 1 (xpos ypos xlen ylen)
-55 25 80 20
+Hitboxes: 1 (xpos ypos xlen ylen) If isolateHitbox is true, the next line is the color to isolate
+212 2260 80 20 False
 Sprites: xpos ypos xlen ylen
 157 2235 136 110
 
@@ -66,9 +74,9 @@ Frame data: Active Inactive End
 Damage 8
 Knockback 20
 Angle 0
-Hitboxes: 2 (xpos ypos xlen ylen)
-0 0 0 0
-95 98 15 26
+Hitboxes: 2 (xpos ypos xlen ylen) If isolateHitbox is true, the next line is the color to isolate
+0 0 0 0 False
+142 608 15 26 False
 Sprites: xpos ypos xlen ylen
 197 514 119 103
 47 510 116 125

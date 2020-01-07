@@ -15,6 +15,7 @@ class Char(pygame.sprite.Sprite):
         self.player = player  # player number
         self.game = game
         self.stage = self.game.stage
+        self.screen = self.game.screen
         self.name = name  # use this to find the character datasheet, which determines all other character attributes
 
         self.canAct = True  # whether the character is in move lag or hitstun
@@ -22,7 +23,7 @@ class Char(pygame.sprite.Sprite):
         self.datasheet = open(self.name + ".txt")  # get data from the datasheet
 
         self.jumpSpeed = int(self.datasheet.readline()[7:])  # regular movement speed
-        self.mass = int(self.datasheet.readline()[6:])
+        self.mass = float(self.datasheet.readline()[6:])
         self.startingHealth = int(self.datasheet.readline()[8:])  # starting health
         self.driftSpeed = int(self.datasheet.readline()[11:])  # how fast the character drifts
 
@@ -73,10 +74,18 @@ class Char(pygame.sprite.Sprite):
             for k in range(numHitboxes):
                 data = self.datasheet.readline().split()
                 hitbox = []
-                for datum in data:
-                    hitbox.append(int(datum))
 
-                hitboxes.append(pygame.Rect(hitbox))
+                for c in range(len(data)-1):
+                    hitbox.append(int(data[c]))
+
+                if data[-1] == "True":
+                    color = self.datasheet.readline().split()
+                    hitbox.append((int(color[0]), int(color[1]), int(color[2])))
+
+                else:
+                    hitbox.append(None)
+
+                hitboxes.append([pygame.Rect(hitbox[0:4]), hitbox[4]])
 
             next(self.datasheet)
 
@@ -98,7 +107,6 @@ class Char(pygame.sprite.Sprite):
 
         self.hitboxes = []
         self.currMove = None  # the character's active move, if any
-        self.lastHit = None  # the hitbox this character was last hit by
 
         self.rect = pygame.Rect(self.pos, self.dims)  # the character's hurtbox
         self.xVelocity = 0  # velocity in the x direction at any given time
@@ -116,51 +124,6 @@ class Char(pygame.sprite.Sprite):
             self.onWall = [self.stage.rightWall]  # which wall(s) the character is on, if any
 
         self.flipped = False  # whether the sprite has to be flipped to face the opposite direction
-
-    def forwardA(self):
-        if self.canAct:
-            self.moves['forwardA'].start()
-
-    def upA(self):
-        if self.canAct:
-            self.moves['upA'].start()
-
-    def backA(self):
-        if self.canAct:
-            self.moves['backA'].start()
-
-    def downA(self):
-        if self.canAct:
-            self.moves['downA'].start()
-
-    def neutralA(self):
-        if self.canAct:
-            self.moves['neutralA'].start()
-
-    def upB(self):
-        pass
-
-    def downB(self):
-        pass
-
-    def forwardB(self):
-        pass
-
-    def backB(self):
-        pass
-
-    def neutralB(self):
-        pass
-
-    def tether(self):  # consider a midair boost instead of or in addition to a tether
-        pass
-
-    def boost(self):
-        pass
-
-    def shield(self):
-        # think about ideas for this--possibly a directional reflector shield that lasts for a short amount of time and has ending lag
-        pass
 
     def jump(self, angle):  # character jumps off the wall based on input
         self.xVelocity = round(math.cos(math.radians(angle)), 2) * self.jumpSpeed
@@ -186,17 +149,27 @@ class Char(pygame.sprite.Sprite):
         if self.hitstun != -1:
             color = (200, 255, 200)
         elif not self.canAct:
-            color = (255, 230, 200)
+            if self.hitboxes:
+                if self.hitboxes[0].shape.x > 0:
+                    color = (255, 200, 200)
+                else:
+                    color = (255, 230, 200)
+            else:
+                color = (255, 230, 200)
         else:
             color = (255, 255, 200)
 
-        pygame.draw.rect(self.game.screen, color, self.rect)  # draw the hurtbox
-        # draw the sprite--hurtbox is used because hurtbox is already in the correct location
+        pygame.draw.rect(self.screen, color, self.rect)  # draw the rectangle
+        # draw the sprite--rect is used because rect is already in the correct location
         # if self.pos was used, sprite would appear hovering on right wall
-        self.game.screen.blit(sprite, (self.rect.x, self.rect.y))
+        self.screen.blit(sprite, (self.rect.x, self.rect.y))
 
-        for hitbox in self.hitboxes:  # draw hitboxes
-            pygame.draw.rect(self.game.screen, (255, 150, 150), hitbox.shape)
+        for hitbox in self.hitboxes:  # draw the outline of the hitboxes
+            outline = hitbox.mask.outline()
+            print("Outline exists: " + str(len(outline) > 0))
+            for point in outline:
+                pygame.draw.circle(self.screen, pygame.Color("Red"),
+                                   (point[0] + hitbox.rect.x, point[1] + hitbox.rect.y), 0)
 
     def update(self):  # operations that must be done every frame
         self.updateOrientation()
@@ -315,7 +288,7 @@ class Char(pygame.sprite.Sprite):
         self.health -= hitbox.damage  # take the appropriate amount of damage
         if self.health <= 0:
             self.game.end(self)
-        self.lastHit = hitbox
+
         # update the health bar
         self.healthBar = pygame.Rect(0, 0, self.dims[0] * self.health / self.startingHealth, HEALTH_BAR_WIDTH)
         # Maybe change to: use the centers of each rectangle to determine the general direction the character will be sent in
@@ -323,20 +296,62 @@ class Char(pygame.sprite.Sprite):
         #  the character will be sent in the opposite direction of the hurtbox
         #  the magnitude of the x and y velocity will be determined by the knockback and knockback angle of the hitbox
         if not self.onWall:
-            self.xVelocity = math.sin(math.radians(hitbox.angle)) * hitbox.knockback
-            self.yVelocity = math.cos(math.radians(hitbox.angle)) * hitbox.knockback
+            self.xVelocity = math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
+            self.yVelocity = math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
 
         self.canAct = False
         self.hitstun = int(hitbox.knockback * HITSTUN_CONSTANT)
 
         if self.hitstun != -1:
             print("Combo!")
-        # TODO: look into health randomly changing (haven't had this problem recently)
 
     def move(self, x, y):
         self.pos = (self.pos[0] + x, self.pos[1] + y)
-        # for i in range(len(self.hitboxes)):
-        #     self.hitboxes[i].move(x, y)
+
+    def forwardA(self):
+        if self.canAct:
+            self.moves['forwardA'].start()
+
+    def upA(self):
+        if self.canAct:
+            self.moves['upA'].start()
+
+    def backA(self):
+        if self.canAct:
+            self.moves['backA'].start()
+
+    def downA(self):
+        if self.canAct:
+            self.moves['downA'].start()
+
+    def neutralA(self):
+        if self.canAct:
+            self.moves['neutralA'].start()
+
+    def upB(self):
+        pass
+
+    def downB(self):
+        pass
+
+    def forwardB(self):
+        pass
+
+    def backB(self):
+        pass
+
+    def neutralB(self):
+        pass
+
+    def tether(self):
+        pass
+
+    def boost(self):
+        pass
+
+    def shield(self):
+        # think about ideas for this--possibly a directional reflector shield that lasts for a short amount of time and has ending lag
+        pass
 
 
 class Button:
