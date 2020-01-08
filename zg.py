@@ -1,9 +1,8 @@
 # TODO LIST:
 #          Implement tether, shield, and midair boost
-#          Switch from using pixel arrays to just masks for hitboxes
 #          Allow characters to move out of corners more easily
 #          Look into flipping characters' direction
-#          Character and stage select screen
+#          Stage select screen
 
 # TODO FUTURE:
 #          Add new stages
@@ -21,19 +20,29 @@ from Stage import Stage
 
 WIDTH = 1000  # screen width
 HEIGHT = 500  # screen height
+WINDOW_OFFSET_X = 5
+WINDOW_OFFSET_Y = 30  # no idea why but this works
 START_COLOR = (255, 255, 255)  # start screen is white
 GAME_COLOR = (255, 255, 255)  # game screen is white -- possible to make this stage-dependent
-START_TEXT = "Zero Gravity"  # text on the start screen
+
+START_TEXT = "ZERO GRAVITY"  # text on the start screen
 START_TEXT_POS = (WIDTH / 2 - 300, 2.0 / 7 * HEIGHT)  # top left corner of start text
 START_TEXT_SIZE = 100  # start screen text will be this big
 START_TEXT_RECT_DIMS = (600, 100)  # somewhat arbitrary
 FPS = 60  # 60 frames per second
-BUTTON_TEXT_SIZE = 67  # text on the button will be this big
-BUTTON_CORNER = (5 / 18.0 * WIDTH, 4.3 / 7 * HEIGHT)  # top left corner of start button
-BUTTON_DIMS = (4 / 9.0 * WIDTH, 1 / 10.0 * HEIGHT)  # length and width of start button
+BUTTON_TEXT_SIZE = 60  # text on the button will be this big
+BUTTON_CORNER = (0.278 * WIDTH, 0.614 * HEIGHT)  # top left corner of start button
+BUTTON_DIMS = (0.444 * WIDTH, 0.1 * HEIGHT)  # length and width of start button
+
+NUM_CHARS = 1
+CHAR_SELECT_DIMS = (0.13 * WIDTH, 0.23 * HEIGHT)  # length and width character select buttons
+# top left corner of the first character on the select screen
+CHAR_SELECT_SPACE = (5, 5)  # distance in between each character on the select screen
+CHAR_SELECT_WIDTH = CHAR_SELECT_DIMS[0] + CHAR_SELECT_SPACE[0]
+CHAR_SELECT_LEN = CHAR_SELECT_DIMS[1] + CHAR_SELECT_SPACE[1]
+
 WALL_WIDTH = 40  # how wide the wall is
-WINDOW_OFFSET_X = 5
-WINDOW_OFFSET_Y = 30  # no idea why but this works
+
 # LEFT_PLAT = (WIDTH / 3 - WIDTH / 14, HEIGHT / 2 - HEIGHT / 8, WIDTH / 7, HEIGHT / 4)
 # position and dimensions of a left platform (will be stage dependent in the future)
 # RIGHT_PLAT = (WIDTH * 2 / 3 - WIDTH / 14, HEIGHT / 2 - HEIGHT / 8, WIDTH / 7, HEIGHT / 4)
@@ -74,7 +83,7 @@ class ZeroGravity:
         pygame.display.flip()  # open the screen
 
         self.chars = []  # list of playable characters
-        self.status = "start screen"  # whether the game is at the start screen, character select screen, or in a game
+        self.status = 'start screen'  # whether the game is at the start screen, character select screen, or in a game
         self.playChars = []  # list of characters currently playing
         self.clock = pygame.time.Clock()
 
@@ -82,9 +91,8 @@ class ZeroGravity:
         self.fps = 0  # frames per second
         # (both of these will be set in the mainloop function)
 
-        # TODO: initButtons, initCharacters, etc. functions?
         rect = pygame.Rect(BUTTON_CORNER, BUTTON_DIMS)
-        self.startButton = Button("Start!", BUTTON_TEXT_SIZE, (0, 0, 0), rect, self)
+        self.startButton = TextButton("START", BUTTON_TEXT_SIZE, (0, 0, 0), rect, self)
 
         self.wallWidth = WALL_WIDTH
         walls = [pygame.Rect(0, 0, WALL_WIDTH, self.h), pygame.Rect(0, 0, self.w, WALL_WIDTH),
@@ -93,6 +101,18 @@ class ZeroGravity:
 
         # put in stage select screen
         self.stage = Stage(walls, self)
+
+        self.chars = ["Swordsman"]
+        self.charButtons = []
+        start_x = 0.5 * WIDTH - 0.5 * CHAR_SELECT_DIMS[0] - CHAR_SELECT_WIDTH * int(0.5 * NUM_CHARS)
+        start_y = 0.5 * HEIGHT - CHAR_SELECT_DIMS[0] * 0.5
+        for i in range(NUM_CHARS):
+            xPos = start_x + i * (CHAR_SELECT_SPACE[0])
+            rect = pygame.Rect(xPos, start_y, CHAR_SELECT_DIMS[0], CHAR_SELECT_DIMS[1])
+
+            char = Char(self.chars[i], self, 1)
+            charImage = char.spriteSheet.subsurface(char.defaultSprite).copy()
+            self.charButtons.append(ImageButton(charImage, rect, self))
 
         # self.walls.append(pygame.Rect(LEFT_PLAT))
         # self.walls.append(pygame.Rect(RIGHT_PLAT))
@@ -121,26 +141,6 @@ class ZeroGravity:
 
         pygame.quit()
 
-    def draw(self):
-        if self.status == 'start screen':
-            self.screen.fill(START_COLOR)
-            rect = pygame.Rect(START_TEXT_POS, START_TEXT_RECT_DIMS)
-            self.displayText(START_TEXT, START_TEXT_SIZE, rect)
-            self.startButton.draw()
-            # start screen
-
-        # (character select screen)
-        elif self.status == 'char select':
-            pass
-        elif self.status == 'stage select':
-            pass
-        else:
-            self.screen.fill(GAME_COLOR)
-            for char in self.playChars:
-                char.draw()
-            self.stage.draw()
-            # add in stage-specific stuff here
-
     def loop(self, fps):
         pygame.display.set_caption("Zero Gravity")  # text at the top of the window
         self.handleEvents()  # detect inputs
@@ -149,11 +149,32 @@ class ZeroGravity:
         pygame.display.flip()
         self.clock.tick(fps)
 
+    def draw(self):
+        # start screen
+        if self.status == 'start screen':
+            self.screen.fill(START_COLOR)
+            rect = pygame.Rect(START_TEXT_POS, START_TEXT_RECT_DIMS)
+            self.displayText(START_TEXT, START_TEXT_SIZE, rect)
+            self.startButton.draw()
+
+        elif self.status == 'char select':
+            self.screen.fill(START_COLOR)
+            for button in self.charButtons:
+                button.draw()
+        elif self.status == 'stage select':
+            pass
+        elif self.status == 'in game':
+            self.screen.fill(GAME_COLOR)
+            for char in self.playChars:
+                char.draw()
+            self.stage.draw()
+
     def handleEvents(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:  # when you click x, exit the program
                 self.running = False
             elif event.type == pygame.KEYDOWN:
+                print("key pressed")
                 self.keyDown(pygame.key.get_pressed())  # if a key was pressed, do the associated action
             # elif event.type == pygame.KEYUP:
             #   self.keyUp(pygame.key.get_pressed())  # if a key was released, do the associated action
@@ -164,31 +185,31 @@ class ZeroGravity:
             # elif event.type == pygame.MOUSEMOTION:
             # self.mouseMotion(event.buttons, event.pos, event.rel) #if the mouse was moved, do the associated action
             elif event.type == pygame.JOYAXISMOTION:
-
                 control_x = self.controller.get_axis(CONTROL_STICK_HORIZONTAL)
                 control_y = self.controller.get_axis(CONTROL_STICK_VERTICAL)
                 c_x = self.controller.get_axis(C_STICK_HORIZONTAL)
                 c_y = self.controller.get_axis(C_STICK_VERTICAL)
 
-                # if control_x > 0.1 or control_x < -0.1 or control_y > 0.1 or control_y < -0.1:
-                    # print("Control stick values: (%f, %f)" % (control_x, control_y))
+                if control_x > 0.1 or control_x < -0.1 or control_y > 0.1 or control_y < -0.1:
+                    print("Control stick values: (%f, %f)" % (control_x, control_y))
 
                 self.joystickMoved(control_x, control_y, c_x, c_y)
 
-                # print("joystick moved")
             elif event.type == pygame.JOYBUTTONUP:
+                print("button pressed")
                 self.buttonPressed(event.button)
 
     def joystickMoved(self, controlX, controlY, cStickX, cStickY):
+        print("Status: " + self.status)
+        print("Controls: " + self.controls)
         if self.status == 'in game' and self.controls == "joystick":  # if a game is being played
-            # print("c stick angle: %d" % joystickAngle(cStickX, cStickY))
+            print("control stick angle: %d" % joystickAngle(controlX, controlY))
             walls = self.playChars[0].onWall  # the wall(s) player 1's character is on
-            if walls:
-                # if player 1's character is on a wall and a direction is inputted,
+            if walls:  # if player 1's character is on a wall and a direction is inputted,
+                # if the player angles away from the wall, that character jumps off the wall
                 if self.stage.checkWalls(joystickAngle(controlX, controlY), walls, self.playChars[0]):
                     # print("Joystick angle: " + str(joystickAngle(controlX, controlY)))
                     self.playChars[0].jump(joystickAngle(controlX, controlY))
-                    # if the player angles away from the wall, that character jumps off the wall
 
             if not self.playChars[0].onWall:
                 if cStickX < -DEAD_ZONE:  # if left was inputted
@@ -278,8 +299,8 @@ class ZeroGravity:
                 self.playChars[1].drift(keyAngle(keys))  # player 2's character drifts
 
     def joystickHeld(self, xAxis, yAxis):
-        if self.status == "in game":  # if a game is being played
-            if self.controls == "joystick":
+        if self.status == 'in game':  # if a game is being played
+            if self.controls == 'joystick':
                 angle = joystickAngle(xAxis, yAxis)
                 if self.playChars[0].onWall == [] and angle != -1:
                     # if player 1's character is not on a wall and a direction is inputted,
@@ -291,11 +312,14 @@ class ZeroGravity:
     def mouseUp(self, button, pos):
         if self.status == 'start screen':
             if self.startButton.clicked(pos) and button == 1:
-                self.status = 'in game'  # change to character select screen, then stage select screen
-                self.playChars = []
-                self.playChars.append(Char('Swordsman', self, 0))  # change obviously
-                self.playChars.append(Char('Swordsman', self, 1))
-            # other buttons
+                self.status = 'char select'  # change to character select screen, then stage select screen
+
+        elif self.status == 'char select':
+            for i in range(NUM_CHARS):
+                if self.charButtons[i].clicked(pos) and button == 1:
+                    self.status = 'in game'
+                    self.playChars.append(Char(self.chars[i], self, 0))
+                    self.playChars.append(Char('Swordsman', self, 1))
 
     def update(self):  # update the screen to the next frame
         self.keyHeld(pygame.key.get_pressed())  # perform actions based on keys held down
@@ -310,7 +334,7 @@ class ZeroGravity:
 
     def detectCollisions(self):  # see if a character has collided with a wall (other character)
         for char in self.playChars:  # for every character playing,
-            # TODO: use mask to check if
+            # TODO: use mask to check if char collides with wall
             collided = char.rect.collidelist(self.stage.walls)
             # if char == self.playChars[0] and collided == 2:
             #     print("collided with right wall")
@@ -338,7 +362,7 @@ class ZeroGravity:
                             c2.hit(hitbox)  # the character gets hit
                             char.currMove.deactivate()  # deactivate the hitbox so it doesn't keep hitting
 
-                    # TODO: handle collison
+                    # TODO: handle collision
                     # if pygame.sprite.collide_mask(char, c2):
                         # print("character collision")
 
@@ -355,19 +379,6 @@ class ZeroGravity:
         textpos.centery = rect.centery
         pygame.draw.rect(self.screen, bkgColor, textpos)
         self.screen.blit(text, textpos)
-
-# # return a tuple giving the direction of the joystick given its position
-# def joystickDirection(x, y):
-#     if x > JOYSTICK_DIAG - DEAD_ZONE:
-#         if y > JOYSTICK_DIAG - DEAD_ZONE:
-#             return 0, 1, 0, 1
-#         if y < - JOYSTICK_DIAG - DEAD_ZONE:
-#             return 0, 1, 1, 0
-#     if x < - JOYSTICK_DIAG - DEAD_ZONE:
-#         if y > JOYSTICK_DIAG - DEAD_ZONE:
-#             return 1, 0, 0, 1
-#         if y < - JOYSTICK_DIAG - DEAD_ZONE:
-#             return 1, 0, 1, 0
 
 def keyAngle(keys):  # given a set of inputs, return the angle that corresponds to those inputs
     right = False

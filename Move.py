@@ -39,7 +39,7 @@ class Move:
         # move hitboxes to the left side of the character if it's player 2
         if self.char.player == 1:
             for i in range(len(self.hitboxes)):
-                self.hitboxes[i][0] = self.hitboxes[i][0].move(-1 * self.hitboxes[i][0].x, 0)
+                self.hitboxes[i] = self.hitboxes[i].move(-1 * self.hitboxes[i].x, 0)
 
     def start(self):
         self.frame = 0
@@ -51,16 +51,15 @@ class Move:
 
         if self.hitboxActive:
             # hitbox location, aligned with the character's location
-            hitboxData = self.hitboxes[self.spriteIndex]
-            loc = hitboxData[0]
-            isolateHitbox = True
+            loc = self.hitboxes[self.spriteIndex]
 
-            if hitboxData[-1] is None:
-                isolateHitbox = False
+            # isolateHitbox = True
+            #
+            # if hitboxData[-1] is None:
+            #     isolateHitbox = False
 
             # create a hitbox with the relevant properties and add it to the character's list of active hitboxes
-            self.char.hitboxes.append(Hitbox(loc, self.damage, self.knockback, self.angle,
-                                             isolateHitbox, hitboxData[1], self))
+            self.char.hitboxes.append(Hitbox(loc, self.damage, self.knockback, self.angle, self))
 
     def update(self):
         if self.frame > -1:
@@ -94,7 +93,7 @@ class Move:
 
 
 class Hitbox(pygame.sprite.Sprite):
-    def __init__(self, points, damage, knockback, angle, isolateHitbox, color, move):
+    def __init__(self, points, damage, knockback, angle, move):
         pygame.sprite.Sprite.__init__(self)
 
         self.shape = points
@@ -113,23 +112,21 @@ class Hitbox(pygame.sprite.Sprite):
         # print("currSprite location: (%d,%d)" % (self.char.currSprite[0], self.char.currSprite[1]))
 
         self.image = self.spriteSheet.subsurface(self.shape).copy()
-        if isolateHitbox:
-            self.color = color
-            self.mask = self.isolateHitbox()
-        else:
-            self.mask = pygame.mask.from_surface(self.image)
+        # self.color = color
+            # self.mask = self.isolateHitbox()
+        self.mask = pygame.mask.from_surface(self.image)
 
     # def move(self, x, y):
     #     self.rect = self.rect.move(x, y)
 
-    def isolateHitbox(self):
-        pixelArray = pygame.PixelArray(self.image)
-        pixelArray = pixelArray.extract(self.color)
-        mask_surface = pixelArray.make_surface()
-        mask_surface.set_colorkey((0, 0, 0))
-        mask = pygame.mask.from_surface(mask_surface)
-        pixelArray.close()
-        return mask
+    # def isolateHitbox(self):
+    #     pixelArray = pygame.PixelArray(self.image)
+    #     pixelArray = pixelArray.extract(self.color)
+    #     mask_surface = pixelArray.make_surface()
+    #     mask_surface.set_colorkey((0, 0, 0))
+    #     mask = pygame.mask.from_surface(mask_surface)
+    #     pixelArray.close()
+    #     return mask
 
 
 class Projectile(pygame.sprite.Sprite):

@@ -45,8 +45,7 @@ class Char(pygame.sprite.Sprite):
 
         self.dims = (self.currSprite[2], self.currSprite[3])  # width and height
         # image of the character from sprite sheet
-        self.image = self.spriteSheet.subsurface(self.currSprite[0], self.currSprite[1],
-                                                 self.dims[0], self.dims[1]).copy()
+        self.image = self.spriteSheet.subsurface(self.currSprite).copy()
 
         # start of left wall if you're player 1, right wall if you're player 2
         if self.player == 0:
@@ -75,17 +74,17 @@ class Char(pygame.sprite.Sprite):
                 data = self.datasheet.readline().split()
                 hitbox = []
 
-                for c in range(len(data)-1):
+                for c in range(len(data)):
                     hitbox.append(int(data[c]))
 
-                if data[-1] == "True":
-                    color = self.datasheet.readline().split()
-                    hitbox.append((int(color[0]), int(color[1]), int(color[2])))
+                # if data[-1] == "True":
+                #     color = self.datasheet.readline().split()
+                #     hitbox.append((int(color[0]), int(color[1]), int(color[2])))
 
-                else:
-                    hitbox.append(None)
+                # else:
+                #     hitbox.append(None)
 
-                hitboxes.append([pygame.Rect(hitbox[0:4]), hitbox[4]])
+                hitboxes.append(pygame.Rect(hitbox))
 
             next(self.datasheet)
 
@@ -108,7 +107,8 @@ class Char(pygame.sprite.Sprite):
         self.hitboxes = []
         self.currMove = None  # the character's active move, if any
 
-        self.rect = pygame.Rect(self.pos, self.dims)  # the character's hurtbox
+        # a rectangle around the character, used to speed up collision detection
+        self.rect = pygame.Rect(self.pos, self.dims)
         self.xVelocity = 0  # velocity in the x direction at any given time
         self.yVelocity = 0  # velocity in the y direction at any given time
 
@@ -233,8 +233,7 @@ class Char(pygame.sprite.Sprite):
         elif self.canAct:  # **could change
             self.currSprite = self.defaultSprite
         self.dims = (self.currSprite[2], self.currSprite[3])
-        self.image = self.spriteSheet.subsurface(self.currSprite[0], self.currSprite[1],
-                                                 self.dims[0], self.dims[1]).copy()
+        self.image = self.spriteSheet.subsurface(self.currSprite).copy()
 
     def hitWall(self, wall):
         if wall not in self.onWall:
@@ -354,17 +353,30 @@ class Char(pygame.sprite.Sprite):
         pass
 
 
-class Button:
-    def __init__(self, text, size, color, rect, game):
+class TextButton:
+    def __init__(self, text, size, textColor, rect, game):
         self.words = text
         self.textSize = size
         self.rect = rect
         self.game = game
-        self.color = color
+        self.textColor = textColor
 
     def draw(self):
-        pygame.draw.rect(self.game.screen, (0, 0, 0), self.rect, 1)
-        self.game.displayText(self.words, self.textSize, self.rect, (255, 255, 255), self.color)
+        pygame.draw.rect(self.game.screen, (0, 0, 0), self.rect, 2)
+        self.game.displayText(self.words, self.textSize, self.rect, (255, 255, 255), self.textColor)
+
+    def clicked(self, pos):
+        return self.rect.collidepoint(pos)
+
+class ImageButton:
+    def __init__(self, image, rect, game):
+        self.image = image
+        self.game = game
+        self.rect = rect
+
+    def draw(self):
+        pygame.draw.rect(self.game.screen, (0, 0, 0), self.rect, 2)
+        self.game.screen.blit(self.image, (self.rect[0], self.rect[1]))
 
     def clicked(self, pos):
         return self.rect.collidepoint(pos)
