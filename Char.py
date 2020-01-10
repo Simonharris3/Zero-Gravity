@@ -7,6 +7,7 @@ HEALTH_BAR_WIDTH = 5
 
 HITSTUN_CONSTANT = 5
 
+IMAGE_SPACE = 5
 
 class Char(pygame.sprite.Sprite):
     def __init__(self, name, game, player):
@@ -19,8 +20,9 @@ class Char(pygame.sprite.Sprite):
         self.name = name  # use this to find the character datasheet, which determines all other character attributes
 
         self.canAct = True  # whether the character is in move lag or hitstun
+        self.frozen = False  # if a character is frozen, it cannot drift or jump
 
-        self.datasheet = open(self.name + ".txt")  # get data from the datasheet
+        self.datasheet = open(self.name + '.txt')  # get data from the datasheet
 
         self.jumpSpeed = int(self.datasheet.readline()[7:])  # regular movement speed
         self.mass = float(self.datasheet.readline()[6:])
@@ -46,6 +48,7 @@ class Char(pygame.sprite.Sprite):
         self.dims = (self.currSprite[2], self.currSprite[3])  # width and height
         # image of the character from sprite sheet
         self.image = self.spriteSheet.subsurface(self.currSprite).copy()
+        self.lookingLeft = False  # whether the sprite has to be lookingLeft to face the opposite direction
 
         # start of left wall if you're player 1, right wall if you're player 2
         if self.player == 0:
@@ -56,7 +59,8 @@ class Char(pygame.sprite.Sprite):
 
         self.moves = {}
 
-        moveNames = ['neutralA', 'forwardA', 'backA', 'upA', 'downA']
+        moveNames = ['neutralA', 'forwardA', 'backA', 'upA', 'downA',
+                     'forwardThrow', 'backThrow', 'upThrow', 'downThrow']
 
         # for each move, read in the data from the file and create its move object
         for i in range(len(moveNames)):
@@ -98,7 +102,42 @@ class Char(pygame.sprite.Sprite):
                 sprites.append(pygame.Rect(sprite))
 
             # create a move object with all the data read from the file
-            self.moves[moveNames[i]] = Move(frames, damage, knockback, angle, hitboxes, sprites, self.game, self)
+            self.moves[moveNames[i]] = Attack(frames, damage, knockback, angle, hitboxes, sprites, self.game, self)
+
+        self.tetherFile = 'simonbelmont.png'
+
+        for i in range(3):
+            next(self.datasheet)
+
+        frames = self.datasheet.readline().split()
+        next(self.datasheet)
+        startPosText = self.datasheet.readline().split()
+        startPos = (int(startPosText[0]), int(startPosText[1]))
+        numGrabBoxes = int(self.datasheet.readline()[12:])
+
+        grabBoxes = []
+        for k in range(numGrabBoxes):
+            data = self.datasheet.readline().split()
+            grabBox = []
+
+            for c in range(len(data)):
+                grabBox.append(int(data[c]))
+
+            grabBoxes.append(pygame.Rect(grabBox))
+
+        next(self.datasheet)
+
+        sprites = []
+        for k in range(numGrabBoxes):
+            data = self.datasheet.readline().split()
+            sprite = []
+            for datum in data:
+                sprite.append(int(datum))
+
+            sprites.append(pygame.Rect(sprite))
+
+        # create a tether object with all the data read from the file
+        self.tetherAnimation = Tether(frames, startPos, grabBoxes, sprites, self.game, self)
 
         self.hitstun = -1  # frames of hitstun remaining
         self.health = self.startingHealth  # starting health
@@ -106,6 +145,7 @@ class Char(pygame.sprite.Sprite):
 
         self.hitboxes = []
         self.currMove = None  # the character's active move, if any
+        self.grabbing = None  # whether the character is currently grabbing another character
 
         # a rectangle around the character, used to speed up collision detection
         self.rect = pygame.Rect(self.pos, self.dims)
@@ -123,17 +163,23 @@ class Char(pygame.sprite.Sprite):
             self.orientation = 90
             self.onWall = [self.stage.rightWall]  # which wall(s) the character is on, if any
 
-        self.flipped = False  # whether the sprite has to be flipped to face the opposite direction
-
     def jump(self, angle):  # character jumps off the wall based on input
-        self.xVelocity = round(math.cos(math.radians(angle)), 2) * self.jumpSpeed
-        self.yVelocity = round(-1 * math.sin(math.radians(angle)), 2) * self.jumpSpeed
-        self.leaveWall()
+        if not self.frozen:
+            self.xVelocity = round(math.cos(math.radians(angle)), 2) * self.jumpSpeed
+            self.yVelocity = round(-1 * math.sin(math.radians(angle)), 2) * self.jumpSpeed
+            self.leaveWall()
+
+            if 90 < angle < 270:
+                self.lookingLeft = True
+
+            if angle > 270 or angle < 90:
+                self.lookingLeft = False
 
     def drift(self, angle):  # move through the air in the direction being held
-        x = math.cos(math.radians(angle)) * self.driftSpeed  # movement in the x direction
-        y = -1 * math.sin(math.radians(angle)) * self.driftSpeed  # y direction
-        self.move(x, y)
+        if not self.frozen:
+            x = math.cos(math.radians(angle)) * self.driftSpeed  # movement in the x direction
+            y = -1 * math.sin(math.radians(angle)) * self.driftSpeed  # y direction
+            self.move(x, y)
 
     def draw(self):  # displays itself on the screen
         sprite = self.image
@@ -141,10 +187,10 @@ class Char(pygame.sprite.Sprite):
         # sprite.fill(pygame.Color('White'), pygame.Rect(0,0,self.dims[0],HEALTH_BAR_WIDTH))
         sprite.fill(pygame.Color('Red'), self.healthBar)
 
-        sprite = pygame.transform.rotate(sprite, self.orientation)  # rotate sprite depending on orientation
-
-        if self.flipped:
+        if self.lookingLeft:
             sprite = pygame.transform.flip(sprite, True, False)  # horizontally flip the sprite if necessary
+
+        sprite = pygame.transform.rotate(sprite, self.orientation)  # rotate sprite depending on orientation
 
         if self.hitstun != -1:
             color = (200, 255, 200)
@@ -165,10 +211,13 @@ class Char(pygame.sprite.Sprite):
         self.screen.blit(sprite, (self.rect.x, self.rect.y))
 
         for hitbox in self.hitboxes:  # draw the outline of the hitboxes
+            # draw tethers and projectiles
+            hitbox.draw()
+
             outline = hitbox.mask.outline()
-            print("Outline exists: " + str(len(outline) > 0))
+            # print('Outline exists: ' + str(len(outline) > 0))
             for point in outline:
-                pygame.draw.circle(self.screen, pygame.Color("Red"),
+                pygame.draw.circle(self.screen, pygame.Color('Red'),
                                    (point[0] + hitbox.rect.x, point[1] + hitbox.rect.y), 0)
 
     def update(self):  # operations that must be done every frame
@@ -189,9 +238,7 @@ class Char(pygame.sprite.Sprite):
         if self.hitstun != -1:
             self.hitstun -= 1
 
-        if self.currMove is not None:
-            self.canAct = False
-        elif self.hitstun == 0:
+        if self.hitstun == 0:
             self.canAct = True
             self.hitstun = -1
 
@@ -222,10 +269,10 @@ class Char(pygame.sprite.Sprite):
         if not self.onWall:
             self.orientation = 0
 
-        if self.onWall == [] and self.player == 1:
-            self.flipped = True
-        else:
-            self.flipped = False
+        # if self.onWall == [] and self.player == 1:
+        #     self.lookingLeft = True
+        # else:
+        #     self.lookingLeft = False
 
     def updateSprite(self):
         if self.onWall:
@@ -247,38 +294,39 @@ class Char(pygame.sprite.Sprite):
             self.updateSprite()
 
             sides = self.stage.wallSide(self, walls=self.onWall)
-            self.side = sides[0]
-            wall = self.onWall[0]
 
-            print("Sides: " + str(sides))
+            print('Sides: ' + str(sides))
 
-            # make sure character is completely on the wall
-            if self.side == 'right':
-                self.pos = (wall.x + wall.w - 1, self.pos[1])
-                # print('right')
-            elif self.side == 'down':
-                self.pos = (self.pos[0], wall.y + wall.h - 1)
-                # print('down')
-            elif self.side == 'left':
-                self.pos = (wall.x - self.dims[0] + 1, self.pos[1])
-                # print('left')
-            elif self.side == 'up':
-                self.pos = (self.pos[0], wall.y - self.dims[1] + 1)
-                # print('up')
+            for i in range(len(sides)):
+                self.side = sides[i]
+                wall = self.onWall[i]
+                # make sure character is completely on the wall
+                if self.side == 'right':
+                    self.pos = (wall.x + wall.w - 1, self.pos[1])
+                    # print('right')
+                elif self.side == 'down':
+                    self.pos = (self.pos[0], wall.y + wall.h - 1)
+                    # print('down')
+                elif self.side == 'left':
+                    self.pos = (wall.x - self.dims[0] + 1, self.pos[1])
+                    # print('left')
+                elif self.side == 'up':
+                    self.pos = (self.pos[0], wall.y - self.dims[1] + 1)
+                    # print('up')
 
             for wall in self.onWall:
                 if wall == self.stage.walls[0]:
-                    print("On left wall")
+                    print('On left wall')
                 if wall == self.stage.walls[1]:
-                    print("On up wall")
+                    print('On up wall')
                 if wall == self.stage.walls[2]:
-                    print("On right wall")
+                    print('On right wall')
                 if wall == self.stage.walls[3]:
-                    print("On down wall")
+                    print('On down wall')
 
-            print("Pos: (%d,%d)" % (self.pos[0], self.pos[1]))
-            # self.game.screen.fill(pygame.Color("Red"), pygame.Rect(500, 200, 10, 10))
-            # self.game.screen.fill(pygame.Color("Blue"), pygame.Rect(835, 499, 10, 10))
+            # print('Pos: (%d,%d)' % (self.pos[0], self.pos[1]))
+            # self.game.screen.fill(pygame.Color('Red'), pygame.Rect(500, 200, 10, 10))
+            # self.game.screen.fill(pygame.Color('Blue'), pygame.Rect(835, 499, 10, 10))
 
     def leaveWall(self):
         self.onWall = []
@@ -302,7 +350,7 @@ class Char(pygame.sprite.Sprite):
         self.hitstun = int(hitbox.knockback * HITSTUN_CONSTANT)
 
         if self.hitstun != -1:
-            print("Combo!")
+            print('Combo!')
 
     def move(self, x, y):
         self.pos = (self.pos[0] + x, self.pos[1] + y)
@@ -343,7 +391,27 @@ class Char(pygame.sprite.Sprite):
         pass
 
     def tether(self):
-        pass
+        if self.canAct:
+            self.tetherAnimation.start()
+
+    def throw(self, direction):
+        if direction == 'right':
+            if self.lookingLeft:
+                self.moves['backThrow'].start()
+            else:
+                self.moves['forwardThrow'].start()
+
+        if direction == 'left':
+            if self.lookingLeft:
+                self.moves['forwardThrow'].start()
+            else:
+                self.moves['backThrow'].start()
+
+        if direction == 'up':
+            self.moves['upThrow'].start()
+
+        if direction == 'down':
+            self.moves['downThrow'].start()
 
     def boost(self):
         pass
@@ -369,14 +437,21 @@ class TextButton:
         return self.rect.collidepoint(pos)
 
 class ImageButton:
-    def __init__(self, image, rect, game):
+    def __init__(self, image, rect, text, textSize, game):
         self.image = image
         self.game = game
         self.rect = rect
+        self.text = text
+        self.textSize = textSize
 
     def draw(self):
         pygame.draw.rect(self.game.screen, (0, 0, 0), self.rect, 2)
-        self.game.screen.blit(self.image, (self.rect[0], self.rect[1]))
+        self.game.screen.blit(self.image, (self.rect[0] + IMAGE_SPACE, self.rect[1] + IMAGE_SPACE))
+        xPos = self.rect.x
+        yPos = self.rect.y + self.image.get_height()
+        length = self.rect.width
+        height = self.rect.height - self.image.get_height()
+        self.game.displayText(self.text, self.textSize, pygame.Rect(xPos, yPos, length, height))
 
     def clicked(self, pos):
         return self.rect.collidepoint(pos)

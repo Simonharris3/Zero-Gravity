@@ -1,9 +1,7 @@
 import pygame
 
-class Move:
-    def __init__(self, frameData, damage, knockback, angle, hitboxes, sprites, game, char):
-        # other attributes can be added later including multiple hitboxes, etc.
-        # not sure if the hitbox should include a hurtbox as well since if it does, that will lead to lots of trades
+class Animation:
+    def __init__(self, frameData, sprites, game, char):
         self.activeframe = int(frameData[0])  # when the hitbox comes out
         self.inactiveframe = int(frameData[1])  # when the hitbox goes away
         self.endframe = int(frameData[2])  # when the endlag stops
@@ -11,72 +9,42 @@ class Move:
         self.game = game  # the game object
         self.char = char  # the character the move belongs to
 
-        # location of the hitboxes of the move (relative to the character's position), in order of when they appear
-        self.hitboxes = hitboxes
         # sprites of the character when the move is active, in order of when they appear
         self.sprites = sprites
         self.spriteSheet = self.char.spriteSheet
 
-        self.damage = damage  # amount of damage the move deals
-        self.knockback = knockback  # how far the move sends the other character
-        self.angle = angle  # what angle the other character is sent at
+        self.active = False
+
+        self.spriteIndex = 0
 
         self.frame = -1  # how many frames the move has been out (starting at 1)
         self.frameWait = (self.inactiveframe - self.activeframe) / len(self.sprites)
         if self.frameWait % 1 != 0:
-            raise ValueError("Number of frames move is active is not divisible by number of sprites ")
+            raise ValueError('Number of frames move is active is not divisible by number of sprites ')
 
         self.frameWait = int(self.frameWait)
 
-        self.spriteIndex = 0
+        self.paused = False
 
-        self.hitboxActive = False
+    def update(self):
+        if self.frame > -1:
+            if not self.paused:
+                self.frame += 1
 
-        # if self.inactiveframe == 25:
-        #     print("Frame wait: " + str(self.frameWait))
-        #     print("Num sprites: " + str(len(sprites)))
-
-        # move hitboxes to the left side of the character if it's player 2
-        if self.char.player == 1:
-            for i in range(len(self.hitboxes)):
-                self.hitboxes[i] = self.hitboxes[i].move(-1 * self.hitboxes[i].x, 0)
+                if self.frame >= self.endframe:
+                    self.end()
+                elif self.activeframe <= self.frame < self.inactiveframe:
+                    if self.frame != self.activeframe:
+                        if (self.frame - self.activeframe) % self.frameWait == 0:
+                            self.spriteIndex += 1
+                    else:
+                        self.active = True
+                    self.act()
 
     def start(self):
         self.frame = 0
         self.char.currMove = self
-
-    def activate(self):
-        print(self.spriteIndex)
-        self.char.currSprite = self.sprites[self.spriteIndex]
-
-        if self.hitboxActive:
-            # hitbox location, aligned with the character's location
-            loc = self.hitboxes[self.spriteIndex]
-
-            # isolateHitbox = True
-            #
-            # if hitboxData[-1] is None:
-            #     isolateHitbox = False
-
-            # create a hitbox with the relevant properties and add it to the character's list of active hitboxes
-            self.char.hitboxes.append(Hitbox(loc, self.damage, self.knockback, self.angle, self))
-
-    def update(self):
-        if self.frame > -1:
-            self.frame += 1
-
-            if self.frame >= self.endframe:
-                self.end()
-            elif self.activeframe <= self.frame < self.inactiveframe:
-                if self.frame != self.activeframe:
-                    if (self.frame - self.activeframe) % self.frameWait == 0:
-                        self.spriteIndex += 1
-                else:
-                    self.hitboxActive = True
-                self.activate()
-            elif self.frame >= self.inactiveframe:
-                self.char.hitboxes = []
-                # this means all hitboxes are removed when one goes away--not sure if that's what i want (but good enough for now)
+        self.char.canAct = False
 
     def end(self):
         self.frame = -1
@@ -86,17 +54,71 @@ class Move:
         self.char.currSprite = self.char.defaultSprite
         self.char.canAct = True
 
-        self.hitboxActive = False
+        self.active = False
+        self.paused = False
 
     def deactivate(self):
-        self.hitboxActive = False
+        self.active = False
 
+    def act(self):
+        pass
+
+class Attack(Animation):
+    def __init__(self, frameData, damage, knockback, angle, hitboxes, sprites, game, char):
+        super().__init__(frameData, sprites, game, char)
+        # other attributes can be added later including multiple hitboxes, etc.
+
+        self.damage = damage  # amount of damage the move deals
+        self.knockback = knockback  # how far the move sends the other character
+        self.angle = angle  # what angle the other character is sent at
+
+        # location of the hitboxes of the move (relative to the character's position), in order of when they appear
+        self.hitboxes = hitboxes
+
+    def act(self):
+        # print(self.spriteIndex)
+        self.char.currSprite = self.sprites[self.spriteIndex]
+
+        if self.active:
+            # hitbox location, aligned with the character's location
+            loc = self.hitboxes[self.spriteIndex]
+            # move hitboxes to the left side of the character if it's player 2
+            # if self.char.lookingLeft:
+            #     print("Moving from %d to %d" % (loc.x, -1 * loc.x))
+            #     loc = loc.move(-1 * loc.x, 0)
+
+            # create a hitbox with the relevant properties and add it to the character's list of active hitboxes
+            self.char.hitboxes.append(Hitbox(loc, self.damage, self.knockback, self.angle, self.char.lookingLeft, self))
+
+class Tether(Animation):
+    def __init__(self, frameData, startPos, grabBoxes, sprites, game, char):
+        super().__init__(frameData, sprites, game, char)
+        self.grabBoxes = grabBoxes
+        self.spriteSheet = char.tetherFile
+        self.startPos = startPos
+
+    def act(self):
+        # print(self.spriteIndex)
+        self.char.currSprite = self.sprites[self.spriteIndex]
+
+        if self.active:
+            # hitbox location (later becomes aligned with the character's location)
+            loc = self.grabBoxes[self.spriteIndex]
+
+            # create a hitbox with the relevant properties and add it to the character's list of active hitboxes
+            self.char.hitboxes.append(GrabBox(loc, self.startPos, self.char.lookingLeft, self))
+
+    def pause(self):
+        self.deactivate()
+        self.paused = True
+
+#shield class?
 
 class Hitbox(pygame.sprite.Sprite):
-    def __init__(self, points, damage, knockback, angle, move):
+    def __init__(self, shape, damage, knockback, angle, flipped, move):
         pygame.sprite.Sprite.__init__(self)
 
-        self.shape = points
+        self.shape = shape
         self.damage = damage
         self.knockback = knockback
         self.angle = angle  # knockback angle
@@ -104,39 +126,64 @@ class Hitbox(pygame.sprite.Sprite):
         self.char = self.move.char
         self.spriteSheet = self.move.spriteSheet
 
-        xPos = self.char.pos[0] + self.shape.x - self.char.currSprite[0]
+        if not flipped:
+            xOffset = self.shape.x - self.char.currSprite[0]
+        else:
+            xOffset = self.char.currSprite[0] + self.char.currSprite[2] - (self.shape.x + self.shape.width)
+
+        xPos = self.char.pos[0] + xOffset
         yPos = self.char.pos[1] + self.shape.y - self.char.currSprite[1]
+
+        # print("Shape.x: %d\nCurrsprite.x: %d" % (self.shape.x, self.char.currSprite[0]))
+        # print("Char pos: %d\nHitbox pos: %d" % (self.char.pos[0], xPos))
+
         self.rect = pygame.Rect(xPos, yPos, self.shape.width, self.shape.height)
-
-        # print("Self.shape: " + str(self.shape))
-        # print("currSprite location: (%d,%d)" % (self.char.currSprite[0], self.char.currSprite[1]))
-
         self.image = self.spriteSheet.subsurface(self.shape).copy()
-        # self.color = color
-            # self.mask = self.isolateHitbox()
+
+        # print('Self.shape: ' + str(self.shape))
+        # print('currSprite location: (%d,%d)' % (self.char.currSprite[0], self.char.currSprite[1]))
+
+        if flipped:
+            self.image = pygame.transform.flip(self.image, True, False)
+
         self.mask = pygame.mask.from_surface(self.image)
 
-    # def move(self, x, y):
-    #     self.rect = self.rect.move(x, y)
+    def hit(self, char):
+        char.hit(self)
 
-    # def isolateHitbox(self):
-    #     pixelArray = pygame.PixelArray(self.image)
-    #     pixelArray = pixelArray.extract(self.color)
-    #     mask_surface = pixelArray.make_surface()
-    #     mask_surface.set_colorkey((0, 0, 0))
-    #     mask = pygame.mask.from_surface(mask_surface)
-    #     pixelArray.close()
-    #     return mask
+    # for tethers and projectiles
+    def draw(self):
+        pass
 
+class GrabBox(Hitbox):
+    def __init__(self, rect, startPos, flipped, move):
+        super().__init__(rect, None, None, None, flipped, move)
+        self.startPos = startPos
+        self.rect.move(startPos[0], startPos[1])
 
-class Projectile(pygame.sprite.Sprite):
+    def hit(self, char):
+        char.xVelocity = 0
+        char.yVelocity = 0
+        char.canAct = False
+        char.frozen = True
+        self.char.grabbing = True
+        # opposing character is stopped in place, self.char gets to throw it
+
+    def draw(self):
+        print("drawing tether")
+        self.move.game.screen.blit(self, self.startPos)
+
+class Projectile(Hitbox):
     def __init__(self, image):
-        pygame.sprite.Sprite.__init__(self)
+        pass
+        # init the hitbox
 
         # self.image =
-        # self.hitbox =
         # self.velocity = (x,y)
 
     def update(self):
         pass
         # move based on velocity
+
+    def draw(self):
+        pass

@@ -70,13 +70,13 @@ class Stage:
         for wall in walls:
             # if char == self.playChars[0] and len(walls) > 1:
             #     if wall == self.walls[0]:
-            #         print("Wall %d: left wall" % i)
+            #         print('Wall %d: left wall' % i)
             #     if wall == self.walls[1]:
-            #         print("Wall %d: up wall" % i)
+            #         print('Wall %d: up wall' % i)
             #     if wall == self.walls[2]:
-            #         print("Wall %d: right wall" % i)
+            #         print('Wall %d: right wall' % i)
             #     if wall == self.walls[3]:
-            #         print("Wall %d: down wall" % i)
+            #         print('Wall %d: down wall' % i)
 
             if wall.x + wall.w - 1 <= char.pos[0]:
                 sides.append('right')  # character is on the right side of the wall
@@ -87,9 +87,9 @@ class Stage:
                     sides.append('up')  # character is above the wall
                 else:
                     r = wall.x + wall.w - 1 - char.pos[0]  # how close a character is to the right side of the wall
-                    l = char.pos[0] - wall.x  # " " left side
-                    t = char.pos[1] - wall.y  # " " top
-                    b = wall.y + wall.h - 1 - char.pos[1]  # " " bottom
+                    l = char.pos[0] - wall.x  # ' ' left side
+                    t = char.pos[1] - wall.y  # ' ' top
+                    b = wall.y + wall.h - 1 - char.pos[1]  # ' ' bottom
 
                     if min(r, l, t, b) == r:
                         sides.append('right')
@@ -103,8 +103,8 @@ class Stage:
             else:  # char.pos[0] < wall.x
                 sides.append('left')  # character is on the left side of the wall
 
-            # print("Side: " + sides[i])
-            # print("i: " + str(i))
+            # print('Side: ' + sides[i])
+            # print('i: ' + str(i))
             i += 1
 
         return sides
@@ -112,3 +112,18 @@ class Stage:
     def draw(self):
         for wall in self.walls:
             pygame.draw.rect(self.game.screen, pygame.Color('Grey'), wall)
+
+    def image(self, width, height):
+        img = pygame.Surface((width, height))
+        img.fill(pygame.Color('White'))
+
+        for wall in self.walls:
+            print('Wall: ' + str(wall))
+            xPos = wall.x / self.game.w * width
+            yPos = wall.y / self.game.h * height
+            miniWidth = wall.width / self.game.w * width
+            miniHeight = wall.height / self.game.h * height
+            miniWall = pygame.Rect(xPos, yPos, miniWidth, miniHeight)
+            img.fill(pygame.Color('Grey'), miniWall)
+
+        return img
