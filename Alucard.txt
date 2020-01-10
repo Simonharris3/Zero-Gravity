@@ -1,6 +1,6 @@
 Speed: 6
 Mass: 0.9
-Health: 80
+Health: 40
 Air speed: 3
 Sprites: alucardfinal.png
 Default sprite: xpos ypos xlen ylen hurtbox_xpos hurtbox_ypos hurtbox_xlen hurtbox_ylen
@@ -25,7 +25,7 @@ Frame data: Active Inactive End
 Damage 2
 Knockback 3
 Angle 45
-Hitboxes: 7 (xpos ypos xlen ylen isolateHitbox)
+Hitboxes: 7 (xpos ypos xlen ylen)
 0 0 0 0
 0 0 0 0
 265 3938 13 21
@@ -55,13 +55,17 @@ Sprites: xpos ypos xlen ylen
 
 Up A:
 Frame data: Active Inactive End
-5 10 25
+5 14 25
 Damage 1
 Knockback 6
 Angle 120
-Hitboxes: 1 (xpos ypos xlen ylen)
+Hitboxes: 3 (xpos ypos xlen ylen)
+0 0 0 0
+0 0 0 0
 223 2250 70 29
 Sprites: xpos ypos xlen ylen
+345 2053 109 157
+42 2216 108 130
 157 2235 136 110
 
 Down A:
@@ -79,64 +83,84 @@ Sprites: xpos ypos xlen ylen
 
 Forward throw:
 Frame data: Active Inactive End
-10 15 30
+5 10 40
 Damage 3
 Knockback 5
 Angle 90
-Hitboxes: 1 (xpos ypos xlen ylen)
-209 4464 447 20
+Hitboxes: 5 (xpos ypos xlen ylen)
+0 0 0 0 // 0 0
+0 0 0 0 // 0 0
+239 4464 180 20 // 494 960
+0 0 0 0 // 0 0
+0 0 0 0 // 0 0
 Sprites: xpos ypos xlen ylen
+220 942 130 100
+220 942 130 100
+363 940 138 102
+363 940 138 102
 310 1398 154 102
 
 Back throw:
 Frame data: Active Inactive End
-10 15 30
+5 20 50
 Damage 3
 Knockback 5
-Angle 0
-Hitboxes: 1 (xpos ypos xlen ylen)
-209 4464 447 20
+Angle 270
+Hitboxes: 3 (xpos ypos xlen ylen)
+239 4464 180 20 // 494 960
+0 0 0 0 // 0 0
+0 0 0 0 // 0 0
 Sprites: xpos ypos xlen ylen
-310 1398 154 102
+363 940 138 102
+220 942 130 100
+52 936 140 109
 
 Up throw:
 Frame data: Active Inactive End
-10 40 60
-Damage 7
-Knockback 20
-Angle 0
-Hitboxes: 1 (xpos ypos xlen ylen)
-209 4464 447 20
+5 26 50
+Damage 3
+Knockback 5
+Angle 180
+Hitboxes: 3 (xpos ypos xlen ylen)
+0 0 0 0 // 0 0
+239 4464 180 20 // 300 2004
+0 0 0 0 // 0 0
 Sprites: xpos ypos xlen ylen
-310 1398 154 102
+377 1944 124 109
+186 1938 174 109
+51 1903 111 151
 
 Down throw:
 Frame data: Active Inactive End
-10 40 60
-Damage 7
-Knockback 20
+5 20 40
+Damage 3
+Knockback 5
 Angle 0
-Hitboxes: 1 (xpos ypos xlen ylen)
-209 4464 447 20
+Hitboxes: 3 (xpos ypos xlen ylen)
+239 4464 180 20 // 427 1772
+0 0 0 0
+0 0 0 0
 Sprites: xpos ypos xlen ylen
-310 1398 154 102
+364 1762 130 137
+52 1904 116 151
+186 1938 174 109
 
 Tether:
 Frame data:
 5 25 40
 Start position:
-497 961
+145 6
 Grab boxes: 10
 0 0 0 0
-209 4464 36 20
-209 4464 72 20
-209 4464 108 20
-209 4464 144 20
-209 4464 180 20
-209 4464 180 20
-209 4464 180 20
-209 4464 180 20
-209 4464 180 20
+239 4464 36 20
+239 4464 72 20
+239 4464 108 20
+239 4464 144 20
+239 4464 180 20
+239 4464 180 20
+239 4464 180 20
+239 4464 180 20
+239 4464 180 20
 Sprites: (Character)
 222 943 127 101
 310 1398 154 102

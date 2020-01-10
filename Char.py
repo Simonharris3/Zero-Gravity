@@ -9,6 +9,8 @@ HITSTUN_CONSTANT = 5
 
 IMAGE_SPACE = 5
 
+MOVE_OFF_WALL = (15, 25)
+
 class Char(pygame.sprite.Sprite):
     def __init__(self, name, game, player):
         pygame.sprite.Sprite.__init__(self)
@@ -62,6 +64,9 @@ class Char(pygame.sprite.Sprite):
         moveNames = ['neutralA', 'forwardA', 'backA', 'upA', 'downA',
                      'forwardThrow', 'backThrow', 'upThrow', 'downThrow']
 
+        throwIndices = (5, 9)
+        self.tetherFile = 'simonbelmont.png'
+
         # for each move, read in the data from the file and create its move object
         for i in range(len(moveNames)):
             for k in range(3):
@@ -101,10 +106,15 @@ class Char(pygame.sprite.Sprite):
 
                 sprites.append(pygame.Rect(sprite))
 
-            # create a move object with all the data read from the file
-            self.moves[moveNames[i]] = Attack(frames, damage, knockback, angle, hitboxes, sprites, self.game, self)
+            if throwIndices[0] <= i < throwIndices[1]:
+                throw = True
+            else:
+                throw = False
 
-        self.tetherFile = 'simonbelmont.png'
+            # print('%s sprite file: %s' % (moveNames[i], spriteFile))
+            # create a move object with all the data read from the file
+            self.moves[moveNames[i]] = \
+                Attack(frames, damage, knockback, angle, hitboxes, sprites, throw, self.game, self)
 
         for i in range(3):
             next(self.datasheet)
@@ -143,7 +153,7 @@ class Char(pygame.sprite.Sprite):
         self.health = self.startingHealth  # starting health
         self.healthBar = pygame.Rect(0, 0, self.dims[0], HEALTH_BAR_WIDTH)
 
-        self.hitboxes = []
+        self.hitboxes = []  # current active hitboxes
         self.currMove = None  # the character's active move, if any
         self.grabbing = None  # whether the character is currently grabbing another character
 
@@ -192,6 +202,7 @@ class Char(pygame.sprite.Sprite):
 
         sprite = pygame.transform.rotate(sprite, self.orientation)  # rotate sprite depending on orientation
 
+        color = None
         if self.hitstun != -1:
             color = (200, 255, 200)
         elif not self.canAct:
@@ -202,17 +213,20 @@ class Char(pygame.sprite.Sprite):
                     color = (255, 230, 200)
             else:
                 color = (255, 230, 200)
-        else:
-            color = (255, 255, 200)
 
-        pygame.draw.rect(self.screen, color, self.rect)  # draw the rectangle
+        # if color is not None:
+            # pygame.draw.rect(self.screen, color, self.rect)  # draw the rectangle
         # draw the sprite--rect is used because rect is already in the correct location
         # if self.pos was used, sprite would appear hovering on right wall
         self.screen.blit(sprite, (self.rect.x, self.rect.y))
 
+        # if self.player == 1:
+        #     print('Hitboxes: ' + str(self.hitboxes))
+
         for hitbox in self.hitboxes:  # draw the outline of the hitboxes
             # draw tethers and projectiles
             hitbox.draw()
+            pygame.draw.rect(self.screen, pygame.Color('Red'), hitbox.rect)
 
             outline = hitbox.mask.outline()
             # print('Outline exists: ' + str(len(outline) > 0))
@@ -221,6 +235,8 @@ class Char(pygame.sprite.Sprite):
                                    (point[0] + hitbox.rect.x, point[1] + hitbox.rect.y), 0)
 
     def update(self):  # operations that must be done every frame
+        if self.frozen:
+            print('Hitstun: ' + str(self.hitstun))
         self.updateOrientation()
         self.move(self.xVelocity, self.yVelocity)
         self.updateCanAct()
@@ -229,10 +245,13 @@ class Char(pygame.sprite.Sprite):
         self.updateMoves()
 
     def updateMoves(self):
+        # clear hitboxes so they can be updated on the next frame
         self.hitboxes = []
 
         for key, value in self.moves.items():
             value.update()
+
+        self.tetherAnimation.update()
 
     def updateCanAct(self):  # updates whether or not the character can act
         if self.hitstun != -1:
@@ -277,17 +296,18 @@ class Char(pygame.sprite.Sprite):
     def updateSprite(self):
         if self.onWall:
             self.currSprite = self.wallSprite
-        elif self.canAct:  # **could change
+        elif self.currMove is None:  # **could change
             self.currSprite = self.defaultSprite
         self.dims = (self.currSprite[2], self.currSprite[3])
         self.image = self.spriteSheet.subsurface(self.currSprite).copy()
 
     def hitWall(self, wall):
-        if wall not in self.onWall:
+        if wall not in self.onWall and not self.frozen:
+            print('hit wall')
             self.canAct = True
 
-            for key, value in self.moves.items():
-                value.end()
+            if self.currMove is not None:
+                self.currMove.end()
 
             self.hitboxes = []
             self.onWall.append(wall)
@@ -331,6 +351,20 @@ class Char(pygame.sprite.Sprite):
     def leaveWall(self):
         self.onWall = []
 
+    def moveOffWall(self):
+        if self.onWall:
+            for side in self.stage.wallSide(self, walls=self.onWall):
+                if side == 'left':
+                    self.move(-1 * MOVE_OFF_WALL[0], 0)
+                if side == 'right':
+                    self.move(MOVE_OFF_WALL[0], 0)
+                if side == 'up':
+                    self.move(0, -1 * MOVE_OFF_WALL[1])
+                if side == 'down':
+                    self.move(0, MOVE_OFF_WALL[1])
+
+            self.leaveWall()
+
     def hit(self, hitbox):  # get hit
         self.health -= hitbox.damage  # take the appropriate amount of damage
         if self.health <= 0:
@@ -346,33 +380,42 @@ class Char(pygame.sprite.Sprite):
             self.xVelocity = math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
             self.yVelocity = math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
 
+        if self.hitstun != -1:
+            print('Combo!')
+            # print('Hitstun: %d' % self.hitstun)
+
         self.canAct = False
         self.hitstun = int(hitbox.knockback * HITSTUN_CONSTANT)
 
-        if self.hitstun != -1:
-            print('Combo!')
+        # print('Knockback: %d, Angle: %d, Damage: %d' % (hitbox.knockback, hitbox.angle, hitbox.damage))
+        # print('Is currmove: ' + str(hitbox.move == self.game.playChars[0].currMove))
 
     def move(self, x, y):
         self.pos = (self.pos[0] + x, self.pos[1] + y)
 
     def forwardA(self):
         if self.canAct:
+            print('forward A performed')
             self.moves['forwardA'].start()
 
     def upA(self):
         if self.canAct:
+            print('up A performed')
             self.moves['upA'].start()
 
     def backA(self):
         if self.canAct:
+            print('back A performed')
             self.moves['backA'].start()
 
     def downA(self):
         if self.canAct:
+            print('down A performed')
             self.moves['downA'].start()
 
     def neutralA(self):
         if self.canAct:
+            print('neutral A performed')
             self.moves['neutralA'].start()
 
     def upB(self):
@@ -396,21 +439,39 @@ class Char(pygame.sprite.Sprite):
 
     def throw(self, direction):
         if direction == 'right':
+            print('Grabbing: ' + str(self.grabbing))
+            self.tetherAnimation.end()
+
             if self.lookingLeft:
+                print('back throw performed')
                 self.moves['backThrow'].start()
+                print('Grabbing: ' + str(self.grabbing))
             else:
+                print('forward throw performed')
                 self.moves['forwardThrow'].start()
 
         if direction == 'left':
+            print('Grabbing: ' + str(self.grabbing))
+            self.tetherAnimation.end()
+
             if self.lookingLeft:
+                print('forward throw performed')
                 self.moves['forwardThrow'].start()
             else:
+                print('back throw performed')
                 self.moves['backThrow'].start()
+                print('Grabbing: ' + str(self.grabbing))
 
         if direction == 'up':
+            self.tetherAnimation.end()
+
+            print('up throw performed')
             self.moves['upThrow'].start()
 
         if direction == 'down':
+            self.tetherAnimation.end()
+
+            print('down throw performed')
             self.moves['downThrow'].start()
 
     def boost(self):
@@ -419,7 +480,6 @@ class Char(pygame.sprite.Sprite):
     def shield(self):
         # think about ideas for this--possibly a directional reflector shield that lasts for a short amount of time and has ending lag
         pass
-
 
 class TextButton:
     def __init__(self, text, size, textColor, rect, game):
