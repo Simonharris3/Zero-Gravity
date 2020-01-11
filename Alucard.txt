@@ -88,11 +88,11 @@ Damage 3
 Knockback 5
 Angle 90
 Hitboxes: 5 (xpos ypos xlen ylen)
-0 0 0 0 // 0 0
-0 0 0 0 // 0 0
+0 0 0 0
+0 0 0 0
 239 4464 180 20 // 494 960
-0 0 0 0 // 0 0
-0 0 0 0 // 0 0
+0 0 0 0
+0 0 0 0
 Sprites: xpos ypos xlen ylen
 220 942 130 100
 220 942 130 100
@@ -108,8 +108,8 @@ Knockback 5
 Angle 270
 Hitboxes: 3 (xpos ypos xlen ylen)
 239 4464 180 20 // 494 960
-0 0 0 0 // 0 0
-0 0 0 0 // 0 0
+0 0 0 0
+0 0 0 0
 Sprites: xpos ypos xlen ylen
 363 940 138 102
 220 942 130 100
@@ -122,9 +122,9 @@ Damage 3
 Knockback 5
 Angle 180
 Hitboxes: 3 (xpos ypos xlen ylen)
-0 0 0 0 // 0 0
+0 0 0 0
 239 4464 180 20 // 300 2004
-0 0 0 0 // 0 0
+0 0 0 0
 Sprites: xpos ypos xlen ylen
 377 1944 124 109
 186 1938 174 109

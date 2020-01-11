@@ -1,6 +1,5 @@
 # TODO LIST:
-#          Implement shield, and midair boost
-#          Look into flipping characters' direction
+#          Implement shield and midair boost
 #          Death, jumping, etc animation
 
 # TODO FUTURE:

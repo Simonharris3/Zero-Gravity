@@ -11,6 +11,9 @@ IMAGE_SPACE = 5
 
 MOVE_OFF_WALL = (15, 25)
 
+DIVIDER_INDEX = 4
+
+
 class Char(pygame.sprite.Sprite):
     def __init__(self, name, game, player):
         pygame.sprite.Sprite.__init__(self)
@@ -78,13 +81,22 @@ class Char(pygame.sprite.Sprite):
             angle = int(self.datasheet.readline()[5:])
             numHitboxes = int(self.datasheet.readline()[10:12])
 
+            if throwIndices[0] <= i < throwIndices[1]:
+                throw = True
+            else:
+                throw = False
+
+            throwLoc = []
             hitboxes = []
             for k in range(numHitboxes):
                 data = self.datasheet.readline().split()
                 hitbox = []
 
-                for c in range(len(data)):
+                for c in range(DIVIDER_INDEX):
                     hitbox.append(int(data[c]))
+
+                for c in range(len(data[DIVIDER_INDEX + 1:])):
+                    throwLoc.append(int(data[c+DIVIDER_INDEX+1]))
 
                 # if data[-1] == "True":
                 #     color = self.datasheet.readline().split()
@@ -106,15 +118,10 @@ class Char(pygame.sprite.Sprite):
 
                 sprites.append(pygame.Rect(sprite))
 
-            if throwIndices[0] <= i < throwIndices[1]:
-                throw = True
-            else:
-                throw = False
-
             # print('%s sprite file: %s' % (moveNames[i], spriteFile))
             # create a move object with all the data read from the file
             self.moves[moveNames[i]] = \
-                Attack(frames, damage, knockback, angle, hitboxes, sprites, throw, self.game, self)
+                Attack(frames, damage, knockback, angle, hitboxes, sprites, throw, throwLoc, self.game, self)
 
         for i in range(3):
             next(self.datasheet)
@@ -215,7 +222,7 @@ class Char(pygame.sprite.Sprite):
                 color = (255, 230, 200)
 
         # if color is not None:
-            # pygame.draw.rect(self.screen, color, self.rect)  # draw the rectangle
+        # pygame.draw.rect(self.screen, color, self.rect)  # draw the rectangle
         # draw the sprite--rect is used because rect is already in the correct location
         # if self.pos was used, sprite would appear hovering on right wall
         self.screen.blit(sprite, (self.rect.x, self.rect.y))
@@ -226,7 +233,7 @@ class Char(pygame.sprite.Sprite):
         for hitbox in self.hitboxes:  # draw the outline of the hitboxes
             # draw tethers and projectiles
             hitbox.draw()
-            pygame.draw.rect(self.screen, pygame.Color('Red'), hitbox.rect)
+            # pygame.draw.rect(self.screen, pygame.Color('Red'), hitbox.rect)
 
             outline = hitbox.mask.outline()
             # print('Outline exists: ' + str(len(outline) > 0))
@@ -481,6 +488,7 @@ class Char(pygame.sprite.Sprite):
         # think about ideas for this--possibly a directional reflector shield that lasts for a short amount of time and has ending lag
         pass
 
+
 class TextButton:
     def __init__(self, text, size, textColor, rect, game):
         self.words = text
@@ -495,6 +503,7 @@ class TextButton:
 
     def clicked(self, pos):
         return self.rect.collidepoint(pos)
+
 
 class ImageButton:
     def __init__(self, image, rect, text, textSize, game):
