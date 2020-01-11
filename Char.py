@@ -13,6 +13,8 @@ MOVE_OFF_WALL = (15, 25)
 
 DIVIDER_INDEX = 4
 
+START_COLOR = (60, 100, 140)
+TEXT_COLOR = (0, 0, 0)
 
 class Char(pygame.sprite.Sprite):
     def __init__(self, name, game, player):
@@ -64,10 +66,10 @@ class Char(pygame.sprite.Sprite):
 
         self.moves = {}
 
-        moveNames = ['neutralA', 'forwardA', 'backA', 'upA', 'downA',
+        moveNames = ['neutralA', 'forwardA', 'backA', 'upA', 'downA', 'downB',
                      'forwardThrow', 'backThrow', 'upThrow', 'downThrow']
 
-        throwIndices = (5, 9)
+        throwIndices = (6, 10)
         self.tetherFile = 'simonbelmont.png'
 
         # for each move, read in the data from the file and create its move object
@@ -237,9 +239,9 @@ class Char(pygame.sprite.Sprite):
 
             outline = hitbox.mask.outline()
             # print('Outline exists: ' + str(len(outline) > 0))
-            for point in outline:
-                pygame.draw.circle(self.screen, pygame.Color('Red'),
-                                   (point[0] + hitbox.rect.x, point[1] + hitbox.rect.y), 0)
+            # for point in outline:
+              #   pygame.draw.circle(self.screen, pygame.Color('Red'),
+                #                   (point[0] + hitbox.rect.x, point[1] + hitbox.rect.y), 0)
 
     def update(self):  # operations that must be done every frame
         if self.frozen:
@@ -374,11 +376,13 @@ class Char(pygame.sprite.Sprite):
 
     def hit(self, hitbox):  # get hit
         self.health -= hitbox.damage  # take the appropriate amount of damage
-        if self.health <= 0:
-            self.game.end(self)
 
         # update the health bar
         self.healthBar = pygame.Rect(0, 0, self.dims[0] * self.health / self.startingHealth, HEALTH_BAR_WIDTH)
+
+        if self.health <= 0:
+            self.game.end(self)
+
         # Maybe change to: use the centers of each rectangle to determine the general direction the character will be sent in
         #  (i.e. the sign of the x and y velocity)
         #  the character will be sent in the opposite direction of the hurtbox
@@ -429,7 +433,9 @@ class Char(pygame.sprite.Sprite):
         pass
 
     def downB(self):
-        pass
+        if self.canAct:
+            print('down B performed')
+            self.moves['downB'].start()
 
     def forwardB(self):
         pass
@@ -499,7 +505,7 @@ class TextButton:
 
     def draw(self):
         pygame.draw.rect(self.game.screen, (0, 0, 0), self.rect, 2)
-        self.game.displayText(self.words, self.textSize, self.rect, (255, 255, 255), self.textColor)
+        self.game.displayText(self.words, self.textSize, self.rect, START_COLOR, self.textColor)
 
     def clicked(self, pos):
         return self.rect.collidepoint(pos)
@@ -520,7 +526,7 @@ class ImageButton:
         yPos = self.rect.y + self.image.get_height()
         length = self.rect.width
         height = self.rect.height - self.image.get_height()
-        self.game.displayText(self.text, self.textSize, pygame.Rect(xPos, yPos, length, height))
+        self.game.displayText(self.text, self.textSize, pygame.Rect(xPos, yPos, length, height), START_COLOR, TEXT_COLOR)
 
     def clicked(self, pos):
         return self.rect.collidepoint(pos)

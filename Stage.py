@@ -1,5 +1,7 @@
 import pygame
 
+WALL_COLOR = (0, 0, 0)
+
 class Stage:
     def __init__(self, walls, game):
         self.walls = walls
@@ -111,7 +113,7 @@ class Stage:
 
     def draw(self):
         for wall in self.walls:
-            pygame.draw.rect(self.game.screen, pygame.Color('Grey'), wall)
+            pygame.draw.rect(self.game.screen, WALL_COLOR, wall)
 
     def image(self, width, height):
         img = pygame.Surface((width, height))

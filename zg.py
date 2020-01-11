@@ -6,6 +6,7 @@
 #          Allow characters to move out of corners more easily
 #          Allow characters to change direction at will
 #          Make throws look better
+#          Make characters move after
 #          Landing lag
 #          When a character in hitstun hits a wall, make it bounce off
 #          Character stunned when tether collides with an attack
@@ -15,6 +16,7 @@
 #          Add new characters
 #          Re-implement keyboard movement
 
+import time
 import pygame.key
 import os
 
@@ -25,8 +27,9 @@ WIDTH = 1000  # screen width
 HEIGHT = 500  # screen height
 WINDOW_OFFSET_X = 5
 WINDOW_OFFSET_Y = 30  # no idea why but this works
-START_COLOR = (255, 255, 255)  # start screen is white
-GAME_COLOR = (255, 255, 255)  # game screen is white -- possible to make this stage-dependent
+START_COLOR = (60, 100, 140)  # start screen color
+START_TEXT_COLOR = (0, 0, 0)
+GAME_COLOR = (0, 50, 100)  # game screen color -- possible to make this stage-dependent
 FPS = 60  # 60 frames per second
 
 START_TEXT = 'ZERO GRAVITY'  # text on the start screen
@@ -98,7 +101,7 @@ class ZeroGravity:
         # (both of these will be set in the mainloop function)
 
         rect = pygame.Rect(BUTTON_CORNER, BUTTON_DIMS)
-        self.startButton = TextButton('START', BUTTON_TEXT_SIZE, (0, 0, 0), rect, self)
+        self.startButton = TextButton('START', BUTTON_TEXT_SIZE, START_TEXT_COLOR, rect, self)
 
         self.wallWidth = WALL_WIDTH
         # TODO: config file?
@@ -172,7 +175,7 @@ class ZeroGravity:
         if self.status == 'start screen':
             self.screen.fill(START_COLOR)
             rect = pygame.Rect(START_TEXT_POS, START_TEXT_RECT_DIMS)
-            self.displayText(START_TEXT, START_TEXT_SIZE, rect)
+            self.displayText(START_TEXT, START_TEXT_SIZE, rect, START_COLOR, START_TEXT_COLOR)
             self.startButton.draw()
         elif self.status == 'stage select':
             self.screen.fill(START_COLOR)
@@ -260,31 +263,51 @@ class ZeroGravity:
         # Player 2: directions--p, l, ;, and ', jump--right alt, A attack--right shift, B attack--right enter.)
         if self.status == 'in game':  # if a game is being played
             char1 = self.playChars[0]
-            if button == A_BUTTON and not char1.onWall:
+            if not char1.onWall:
                 direction = joystickDirection(self.controller.get_axis(CONTROL_STICK_HORIZONTAL),
                                               self.controller.get_axis(CONTROL_STICK_VERTICAL))
 
-                # if a was pressed and player 1's character is not on a wall
-                if direction == 'left':  # if left was inputted
-                    if char1.lookingLeft:
-                        char1.forwardA()
-                    else:
-                        char1.backA()
-                elif direction == 'up':  # if up was inputted
-                    char1.upA()  # do an up a
-                elif direction == 'down':  # if down was inputted
-                    char1.downA()  # do a down a
-                elif direction == 'right':  # if right was inputted
-                    if char1.lookingLeft:
-                        char1.backA()  # do a back a
-                    else:
-                        char1.forwardA()  # do a forward a
-                else:  # if no directions were inputted with the a
-                    char1.neutralA()  # do a neutral a
+                if button == A_BUTTON:
+                    # if a was pressed and player 1's character is not on a wall
+                    if direction == 'left':  # if left was inputted
+                        if char1.lookingLeft:
+                            char1.forwardA()
+                        else:
+                            char1.backA()
+                    elif direction == 'up':  # if up was inputted
+                        char1.upA()  # do an up a
+                    elif direction == 'down':  # if down was inputted
+                        char1.downA()  # do a down a
+                    elif direction == 'right':  # if right was inputted
+                        if char1.lookingLeft:
+                            char1.backA()  # do a back a
+                        else:
+                            char1.forwardA()  # do a forward a
+                    else:  # if no directions were inputted with the a
+                        char1.neutralA()  # do a neutral a
 
-            if button == Z_BUTTON and not char1.onWall:
-                print('tether performed')
-                char1.tether()
+                if button == B_BUTTON:
+                    # if b was pressed and player 1's character is not on a wall
+                    if direction == 'left':  # if left was inputted
+                        if char1.lookingLeft:
+                            char1.forwardB()
+                        else:
+                            char1.backB()
+                    elif direction == 'up':  # if up was inputted
+                        char1.upB()  # do an up b
+                    elif direction == 'down':  # if down was inputted
+                        char1.downB()  # do a down b
+                    elif direction == 'right':  # if right was inputted
+                        if char1.lookingLeft:
+                            char1.backB()  # do a back b
+                        else:
+                            char1.forwardB()  # do a forward b
+                    else:  # if no directions were inputted with the b
+                        char1.neutralB()  # do a neutral b
+
+                if button == Z_BUTTON:
+                    print('tether performed')
+                    char1.tether()
 
     def keyUp(self, keys):  # determines what happens when a key is released
         pass
@@ -398,7 +421,8 @@ class ZeroGravity:
                     for hitbox in char.hitboxes:
                         if pygame.sprite.collide_mask(hitbox, c2):
                             hitbox.hit(c2)  # the character gets hit
-                            char.currMove.deactivate()  # deactivate the hitbox so it doesn't keep hitting
+                            if char.currMove is not None:
+                                char.currMove.deactivate()  # deactivate the hitbox so it doesn't keep hitting
 
                     # TODO: handle character collision
                     # if pygame.sprite.collide_mask(char, c2):
@@ -406,8 +430,11 @@ class ZeroGravity:
 
     def end(self, loser):
         print('Player %d wins!' % ((loser.player + 1) % 2 + 1))
+        self.update()
+        self.draw()
+        time.sleep(1)
         self.playChars = []
-        self.status = 'start screen'
+        self.status = 'char select'
 
     # show text on the screen
     def displayText(self, message, textSize, rect, bkgColor=(255, 255, 255), textColor=(0, 0, 0)):
@@ -417,7 +444,7 @@ class ZeroGravity:
         textpos = text.get_rect()
         textpos.centerx = rect.centerx
         textpos.centery = rect.centery
-        pygame.draw.rect(self.screen, bkgColor, textpos)
+        # pygame.draw.rect(self.screen, bkgColor, textpos)
         self.screen.blit(text, textpos)
 
 # given a set of joystick inputs, return the angle that corresponds to those inputs
