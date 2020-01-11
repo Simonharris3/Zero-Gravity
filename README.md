@@ -28,4 +28,4 @@ P, L, ;, ': move in the air
 
 P, L, ;, ' + right alt: jump off a wall
 
-Each character needs a sprite sheet as well as a configuration file containing information about the character as well as locations of sprites on the sprite sheet.
+Each character needs a sprite sheet as well as a configuration file containing both information about the character and locations of sprites on the sprite sheet.
