@@ -2,21 +2,31 @@ from Move import *
 import math
 import pygame
 
-HEALTH_BAR_OFFSET = 10  # could be used but display is fine without it
+# HEALTH_BAR_OFFSET = 10  # could be used but display is fine without it
 HEALTH_BAR_WIDTH = 5
 
 HITSTUN_CONSTANT = 5
 
-IMAGE_SPACE = 5
+IMAGE_BUTTON_SPACE = 5
 
 MOVE_OFF_WALL = (15, 25)
 
-DIVIDER_INDEX = 4
+DATA_DIVIDER_INDEX = 4
 
 START_COLOR = (60, 100, 140)
 TEXT_COLOR = (0, 0, 0)
 
+SAME_BOOST_CONSTANT = 0.5
+OPPOSITE_BOOST_CONSTANT = 0.8 / 0.5
+
 class Char(pygame.sprite.Sprite):
+    # TODO: add shield destination location to character file
+    #   read in the sprite location (and destination locations) for the shield, and add it to the move list.
+    #   Detect input from controller for where the shield is angled, and use that to determine the offset of the shield sprite
+    #   Call the shield function, and start the shield animation when it is called
+    #   Make shield class extending animation, creating a 'shieldbox' in its act function with the given offset and orientation
+    #   Detect collisions between hitboxes and shields, and end a move when it hits a shield
+
     def __init__(self, name, game, player):
         pygame.sprite.Sprite.__init__(self)
 
@@ -28,6 +38,7 @@ class Char(pygame.sprite.Sprite):
 
         self.canAct = True  # whether the character is in move lag or hitstun
         self.frozen = False  # if a character is frozen, it cannot drift or jump
+        self.unfreezing = False  # character can freeze for 1 frame if this is true
 
         self.datasheet = open(self.name + '.txt')  # get data from the datasheet
 
@@ -66,11 +77,11 @@ class Char(pygame.sprite.Sprite):
 
         self.moves = {}
 
-        moveNames = ['neutralA', 'forwardA', 'backA', 'upA', 'downA', 'downB',
-                     'forwardThrow', 'backThrow', 'upThrow', 'downThrow']
+        moveNames = ['neutralA', 'forwardA', 'backA', 'upA', 'downA', 'downB']
+        throwNames = ['forwardThrow', 'backThrow', 'upThrow', 'downThrow']
 
-        throwIndices = (6, 10)
         self.tetherFile = 'simonbelmont.png'
+        self.shieldFile = 'alucard.png'
 
         # for each move, read in the data from the file and create its move object
         for i in range(len(moveNames)):
@@ -83,22 +94,13 @@ class Char(pygame.sprite.Sprite):
             angle = int(self.datasheet.readline()[5:])
             numHitboxes = int(self.datasheet.readline()[10:12])
 
-            if throwIndices[0] <= i < throwIndices[1]:
-                throw = True
-            else:
-                throw = False
-
-            throwLoc = []
             hitboxes = []
             for k in range(numHitboxes):
                 data = self.datasheet.readline().split()
                 hitbox = []
 
-                for c in range(DIVIDER_INDEX):
+                for c in range(DATA_DIVIDER_INDEX):
                     hitbox.append(int(data[c]))
-
-                for c in range(len(data[DIVIDER_INDEX + 1:])):
-                    throwLoc.append(int(data[c+DIVIDER_INDEX+1]))
 
                 # if data[-1] == "True":
                 #     color = self.datasheet.readline().split()
@@ -123,7 +125,43 @@ class Char(pygame.sprite.Sprite):
             # print('%s sprite file: %s' % (moveNames[i], spriteFile))
             # create a move object with all the data read from the file
             self.moves[moveNames[i]] = \
-                Attack(frames, damage, knockback, angle, hitboxes, sprites, throw, throwLoc, self.game, self)
+                Attack(frames, damage, knockback, angle, hitboxes, sprites, self.game, self)
+
+        for i in range(len(throwNames)):
+            for k in range(3):
+                next(self.datasheet)
+
+            frames = self.datasheet.readline().split()
+            damage = int(self.datasheet.readline()[7:])
+            knockback = int(self.datasheet.readline()[10:])
+            angle = int(self.datasheet.readline()[5:])
+            numHitboxes = int(self.datasheet.readline()[10:12])
+
+            hitboxes = []
+            for k in range(numHitboxes):
+                data = self.datasheet.readline().split()
+                hitbox = []
+
+                for c in range(DATA_DIVIDER_INDEX):
+                    hitbox.append(int(data[c]))
+
+                hitboxes.append(pygame.Rect(hitbox))
+
+            next(self.datasheet)
+
+            sprites = []
+            for k in range(numHitboxes):
+                data = self.datasheet.readline().split()
+                sprite = []
+                for datum in data:
+                    sprite.append(int(datum))
+
+                sprites.append(pygame.Rect(sprite))
+
+            # print('%s sprite file: %s' % (moveNames[i], spriteFile))
+            # create a move object with all the data read from the file
+            self.moves[throwNames[i]] = \
+                Throw(frames, damage, knockback, angle, hitboxes, sprites, self.game, self)
 
         for i in range(3):
             next(self.datasheet)
@@ -211,17 +249,17 @@ class Char(pygame.sprite.Sprite):
 
         sprite = pygame.transform.rotate(sprite, self.orientation)  # rotate sprite depending on orientation
 
-        color = None
-        if self.hitstun != -1:
-            color = (200, 255, 200)
-        elif not self.canAct:
-            if self.hitboxes:
-                if self.hitboxes[0].shape.x > 0:
-                    color = (255, 200, 200)
-                else:
-                    color = (255, 230, 200)
-            else:
-                color = (255, 230, 200)
+        # color = None
+        # if self.hitstun != -1:
+        #     color = (200, 255, 200)
+        # elif not self.canAct:
+        #     if self.hitboxes:
+        #         if self.hitboxes[0].shape.x > 0:
+        #             color = (255, 200, 200)
+        #         else:
+        #             color = (255, 230, 200)
+        #     else:
+        #         color = (255, 230, 200)
 
         # if color is not None:
         # pygame.draw.rect(self.screen, color, self.rect)  # draw the rectangle
@@ -229,25 +267,27 @@ class Char(pygame.sprite.Sprite):
         # if self.pos was used, sprite would appear hovering on right wall
         self.screen.blit(sprite, (self.rect.x, self.rect.y))
 
-        # if self.player == 1:
-        #     print('Hitboxes: ' + str(self.hitboxes))
-
         for hitbox in self.hitboxes:  # draw the outline of the hitboxes
             # draw tethers and projectiles
             hitbox.draw()
             # pygame.draw.rect(self.screen, pygame.Color('Red'), hitbox.rect)
 
-            outline = hitbox.mask.outline()
+            # outline = hitbox.mask.outline()
             # print('Outline exists: ' + str(len(outline) > 0))
             # for point in outline:
               #   pygame.draw.circle(self.screen, pygame.Color('Red'),
                 #                   (point[0] + hitbox.rect.x, point[1] + hitbox.rect.y), 0)
 
     def update(self):  # operations that must be done every frame
-        if self.frozen:
-            print('Hitstun: ' + str(self.hitstun))
+        # if self.frozen:
+        #     print('Hitstun: ' + str(self.hitstun))
+
+        if self.health <= 0:
+            self.game.end(self)
+
         self.updateOrientation()
-        self.move(self.xVelocity, self.yVelocity)
+        if not self.frozen:
+            self.move(self.xVelocity, self.yVelocity)
         self.updateCanAct()
         self.updateSprite()
         self.updateHurtbox()
@@ -380,15 +420,18 @@ class Char(pygame.sprite.Sprite):
         # update the health bar
         self.healthBar = pygame.Rect(0, 0, self.dims[0] * self.health / self.startingHealth, HEALTH_BAR_WIDTH)
 
-        if self.health <= 0:
-            self.game.end(self)
+        # if self.health <= 0:
+        #     self.game.end(self)
 
         # Maybe change to: use the centers of each rectangle to determine the general direction the character will be sent in
         #  (i.e. the sign of the x and y velocity)
         #  the character will be sent in the opposite direction of the hurtbox
         #  the magnitude of the x and y velocity will be determined by the knockback and knockback angle of the hitbox
         if not self.onWall:
-            self.xVelocity = math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
+            if hitbox.char.lookingLeft:
+                self.xVelocity = -1 * math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
+            else:
+                self.xVelocity = math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
             self.yVelocity = math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
 
         if self.hitstun != -1:
@@ -487,13 +530,45 @@ class Char(pygame.sprite.Sprite):
             print('down throw performed')
             self.moves['downThrow'].start()
 
-    def boost(self):
-        pass
-
     def shield(self):
         # think about ideas for this--possibly a directional reflector shield that lasts for a short amount of time and has ending lag
         pass
 
+    def boost(self, angle):
+        xBoost = math.cos(math.radians(angle)) * self.jumpSpeed * SAME_BOOST_CONSTANT
+        yBoost = -1 * math.sin(math.radians(angle)) * self.jumpSpeed * SAME_BOOST_CONSTANT
+
+        print('xBoost: ' + str(xBoost))
+        print('yBoost: ' + str(yBoost))
+
+        print('x velocity: ' + str(self.xVelocity))
+        print('y velocity: ' + str(self.yVelocity))
+
+        if math.copysign(1, xBoost) != math.copysign(1, self.xVelocity):
+            print('x opposite')
+            self.xVelocity = 0
+            xBoost *= OPPOSITE_BOOST_CONSTANT
+
+        if math.copysign(1, yBoost) != math.copysign(1, self.yVelocity):
+            print('y opposite')
+            self.yVelocity = 0
+            yBoost *= OPPOSITE_BOOST_CONSTANT
+
+        self.xVelocity += xBoost
+        self.yVelocity += yBoost
+
+        self.unfreeze()
+
+    def freeze(self):
+        print('frozen')
+        self.frozen = True
+        # self.xVelocity = 0
+        # self.yVelocity = 0
+
+    def unfreeze(self):
+        print('unfrozen')
+        self.frozen = False
+        self.unfreezing = True
 
 class TextButton:
     def __init__(self, text, size, textColor, rect, game):
@@ -521,7 +596,7 @@ class ImageButton:
 
     def draw(self):
         pygame.draw.rect(self.game.screen, (0, 0, 0), self.rect, 2)
-        self.game.screen.blit(self.image, (self.rect[0] + IMAGE_SPACE, self.rect[1] + IMAGE_SPACE))
+        self.game.screen.blit(self.image, (self.rect[0] + IMAGE_BUTTON_SPACE, self.rect[1] + IMAGE_BUTTON_SPACE))
         xPos = self.rect.x
         yPos = self.rect.y + self.image.get_height()
         length = self.rect.width

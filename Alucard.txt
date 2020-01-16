@@ -177,7 +177,7 @@ Angle 90
 Hitboxes: 5 (xpos ypos xlen ylen)
 0 0 0 0
 0 0 0 0
-239 4464 180 20 // 494 960
+239 4464 250 20 // 494 960
 0 0 0 0
 0 0 0 0
 Sprites: xpos ypos xlen ylen
@@ -194,7 +194,7 @@ Damage 3
 Knockback 5
 Angle 270
 Hitboxes: 3 (xpos ypos xlen ylen)
-239 4464 180 20 // 494 960
+239 4464 250 500 // 416 805
 0 0 0 0
 0 0 0 0
 Sprites: xpos ypos xlen ylen
@@ -210,7 +210,7 @@ Knockback 5
 Angle 180
 Hitboxes: 3 (xpos ypos xlen ylen)
 0 0 0 0
-239 4464 180 20 // 300 2004
+239 4464 250 500 // 381 1934
 0 0 0 0
 Sprites: xpos ypos xlen ylen
 377 1944 124 109
@@ -224,7 +224,7 @@ Damage 3
 Knockback 5
 Angle 0
 Hitboxes: 3 (xpos ypos xlen ylen)
-239 4464 180 20 // 427 1772
+239 4464 250 500 // 505 1760
 0 0 0 0
 0 0 0 0
 Sprites: xpos ypos xlen ylen
@@ -259,3 +259,6 @@ Sprites: (Character)
 310 1398 154 102
 310 1398 154 102
 310 1398 154 102
+
+Shield sprite:
+389 4909 116 42

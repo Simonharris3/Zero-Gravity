@@ -1,19 +1,18 @@
 # TODO LIST:
-#          Implement shield and midair boost
+#          Implement shield
 #          Death, jumping, etc animation
 
 # TODO FUTURE:
+#          Add new characters
+#          Allow tethers to be angled and to snap to the wall
 #          Allow characters to move out of corners more easily
 #          Allow characters to change direction at will
-#          Make throws look better
-#          Make characters move after
 #          Landing lag
 #          When a character in hitstun hits a wall, make it bounce off
 #          Character stunned when tether collides with an attack
 #          Comment
 #          Handle character collision
 #          Add new stages
-#          Add new characters
 #          Re-implement keyboard movement
 
 import time
@@ -216,7 +215,7 @@ class ZeroGravity:
                 #     print('Control stick values: (%f, %f)' % (control_x, control_y))
             elif event.type == pygame.JOYBUTTONUP:
                 # print('button pressed')
-                self.buttonPressed(event.button)
+                self.buttonUp(event.button)
 
     def joystickMoved(self, controlX, controlY, cStickX, cStickY):
         # print('Status: ' + self.status)
@@ -253,9 +252,11 @@ class ZeroGravity:
 
             if char1.grabbing is not None:
                 char1.throw(controlDirection)
+            elif char1.frozen and angle != -1:
+                char1.boost(angle)
 
     # determines what happens when a button is pressed
-    def buttonPressed(self, button):
+    def buttonUp(self, button):
         # for i in range(4):
         #     print('Controller axis %d: %d' % (i, self.controller.get_axis(i)))
 
@@ -263,6 +264,9 @@ class ZeroGravity:
         # Player 2: directions--p, l, ;, and ', jump--right alt, A attack--right shift, B attack--right enter.)
         if self.status == 'in game':  # if a game is being played
             char1 = self.playChars[0]
+            if button == X_BUTTON:
+                print('can be frozen')
+                char1.unfreezing = False
             if not char1.onWall:
                 direction = joystickDirection(self.controller.get_axis(CONTROL_STICK_HORIZONTAL),
                                               self.controller.get_axis(CONTROL_STICK_VERTICAL))
@@ -304,6 +308,9 @@ class ZeroGravity:
                             char1.forwardB()  # do a forward b
                     else:  # if no directions were inputted with the b
                         char1.neutralB()  # do a neutral b
+
+                if button == X_BUTTON and self.playChars[0].frozen:
+                    self.playChars[0].frozen = False
 
                 if button == Z_BUTTON:
                     print('tether performed')
@@ -364,6 +371,15 @@ class ZeroGravity:
                     self.playChars[0].drift(angle)  # player 1's character drifts
                     # print('drift: %f' % angle)
 
+    def buttonHeld(self):
+        for i in range(self.controller.get_numbuttons()):
+            if self.status == 'in game':  # if a game is being played
+                char1 = self.playChars[0]
+                # if self.controller.get_button(i) and i == X_BUTTON:
+                #     print('unfreezing: ' + str(char1.unfreezing))
+                if not char1.onWall and i == X_BUTTON and self.controller.get_button(i) and not char1.unfreezing:
+                    char1.freeze()
+
     # TODO: implement joystick for both players
 
     def mouseUp(self, button, pos):
@@ -381,11 +397,16 @@ class ZeroGravity:
             for i in range(NUM_CHARS):
                 if self.charButtons[i].clicked(pos) and button == 1:
                     self.status = 'in game'
-                    self.playChars.append(Char(self.chars[i], self, 0))
-                    self.playChars.append(Char('Alucard', self, 1))
+                    p1 = Char(self.chars[i], self, 0)
+                    p2 = Char('Alucard', self, 1)
+                    p1.opponent = p2
+                    p2.opponent = p1
+                    self.playChars.append(p1)
+                    self.playChars.append(p2)
 
     def update(self):  # update the screen to the next frame
         self.keyHeld(pygame.key.get_pressed())  # perform actions based on keys held down
+        self.buttonHeld()
         self.joystickHeld(self.controller.get_axis(0), self.controller.get_axis(1))
 
         for char in self.playChars:  # update each character
@@ -430,7 +451,6 @@ class ZeroGravity:
 
     def end(self, loser):
         print('Player %d wins!' % ((loser.player + 1) % 2 + 1))
-        self.update()
         self.draw()
         time.sleep(1)
         self.playChars = []
