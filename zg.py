@@ -1,8 +1,8 @@
 # TODO LIST:
-#          Implement shield
 #          Death, jumping, etc animation
 
 # TODO FUTURE:
+#          Fix wall collision by keeping track of a character that had previously
 #          Add new characters
 #          Allow tethers to be angled and to snap to the wall
 #          Allow characters to move out of corners more easily
@@ -71,9 +71,8 @@ C_STICK_HORIZONTAL = 3
 
 DEAD_ZONE = 0.3
 DIAG_DEAD_ZONE = 0.15
+SINGLE_DIRECTION_BUFFER = 0.2
 
-
-# JOYSTICK_DIAG = 0.707
 
 class ZeroGravity:
     def __init__(self):
@@ -130,8 +129,8 @@ class ZeroGravity:
             rect = pygame.Rect(xPos, start_y, STAGE_SELECT_DIMS[0], STAGE_SELECT_DIMS[1])
 
             stage = Stage(self.walls[i], self)
-            stageImage = stage.image(STAGE_SELECT_DIMS[0] - 2*STAGE_IMAGE_SPACE,
-                                     STAGE_SELECT_DIMS[1] - 2*STAGE_IMAGE_SPACE - 16)
+            stageImage = stage.image(STAGE_SELECT_DIMS[0] - 2 * STAGE_IMAGE_SPACE,
+                                     STAGE_SELECT_DIMS[1] - 2 * STAGE_IMAGE_SPACE - 16)
             self.stageButtons.append(ImageButton(stageImage, rect, self.stages[i], SELECT_TEXT_SIZE, self))
 
         # self.walls.append(pygame.Rect(LEFT_PLAT))
@@ -174,7 +173,7 @@ class ZeroGravity:
         if self.status == 'start screen':
             self.screen.fill(START_COLOR)
             rect = pygame.Rect(START_TEXT_POS, START_TEXT_RECT_DIMS)
-            self.displayText(START_TEXT, START_TEXT_SIZE, rect, START_COLOR, START_TEXT_COLOR)
+            self.displayText(START_TEXT, START_TEXT_SIZE, rect, START_TEXT_COLOR)
             self.startButton.draw()
         elif self.status == 'stage select':
             self.screen.fill(START_COLOR)
@@ -261,12 +260,14 @@ class ZeroGravity:
         #     print('Controller axis %d: %d' % (i, self.controller.get_axis(i)))
 
         # Player 1: directions--WASD, jump--joystick, A attack--a, B attack--b.
-        # Player 2: directions--p, l, ;, and ', jump--right alt, A attack--right shift, B attack--right enter.)
+        # Player 2: directions--p, l, ;, and ', jump--right alt, A attack--right shift, B attack--right enter.
         if self.status == 'in game':  # if a game is being played
             char1 = self.playChars[0]
             if button == X_BUTTON:
-                print('can be frozen')
+                # print('can be frozen')
                 char1.unfreezing = False
+            if button == L_BUTTON or button == R_BUTTON:
+                char1.shielding = False
             if not char1.onWall:
                 direction = joystickDirection(self.controller.get_axis(CONTROL_STICK_HORIZONTAL),
                                               self.controller.get_axis(CONTROL_STICK_VERTICAL))
@@ -380,6 +381,13 @@ class ZeroGravity:
                 if not char1.onWall and i == X_BUTTON and self.controller.get_button(i) and not char1.unfreezing:
                     char1.freeze()
 
+                if (i == L_BUTTON and self.controller.get_button(i)) or \
+                        (i == R_BUTTON and self.controller.get_button(i)):
+                    angle = joystickAngle(self.controller.get_axis(CONTROL_STICK_HORIZONTAL),
+                                          self.controller.get_axis(CONTROL_STICK_VERTICAL))
+                    char1.shield(angle)
+                    char1.shielding = True
+
     # TODO: implement joystick for both players
 
     def mouseUp(self, button, pos):
@@ -439,11 +447,17 @@ class ZeroGravity:
 
             for c2 in self.playChars:
                 if c2 is not char:
-                    for hitbox in char.hitboxes:
-                        if pygame.sprite.collide_mask(hitbox, c2):
-                            hitbox.hit(c2)  # the character gets hit
-                            if char.currMove is not None:
-                                char.currMove.deactivate()  # deactivate the hitbox so it doesn't keep hitting
+                    for box in char.hitboxes:
+                        if not isinstance(box, ShieldBox):
+                            if pygame.sprite.collide_mask(box, c2):
+                                box.hit(c2)  # the character gets hit
+                                if char.currMove is not None:
+                                    char.currMove.deactivate()  # deactivate the hitbox so it doesn't keep hitting
+                        else:
+                            for box2 in c2.hitboxes:
+                                if not isinstance(box2, GrabBox) and not isinstance(box2, Shield) and \
+                                        pygame.sprite.collide_mask(box, box2):
+                                    box.hit(box2)
 
                     # TODO: handle character collision
                     # if pygame.sprite.collide_mask(char, c2):
@@ -457,7 +471,7 @@ class ZeroGravity:
         self.status = 'char select'
 
     # show text on the screen
-    def displayText(self, message, textSize, rect, bkgColor=(255, 255, 255), textColor=(0, 0, 0)):
+    def displayText(self, message, textSize, rect, textColor=(0, 0, 0)):
         # TODO: change font
         font = pygame.font.Font(None, textSize)
         text = font.render(message, 1, textColor)
@@ -467,15 +481,16 @@ class ZeroGravity:
         # pygame.draw.rect(self.screen, bkgColor, textpos)
         self.screen.blit(text, textpos)
 
+
 # given a set of joystick inputs, return the angle that corresponds to those inputs
 def joystickAngle(xAxis, yAxis):
-    if yAxis < -1 + DEAD_ZONE:
+    if yAxis < -1 + SINGLE_DIRECTION_BUFFER:
         return 90
-    if xAxis < -1 + DEAD_ZONE:
+    if xAxis < -1 + SINGLE_DIRECTION_BUFFER:
         return 180
-    if yAxis > 1 - DEAD_ZONE:
+    if yAxis > 1 - SINGLE_DIRECTION_BUFFER:
         return 270
-    if xAxis > 1 - DEAD_ZONE:
+    if xAxis > 1 - SINGLE_DIRECTION_BUFFER:
         return 0
 
     right = False
@@ -531,6 +546,7 @@ def joystickAngle(xAxis, yAxis):
     else:
         return -1
 
+
 def joystickDirection(xAxis, yAxis):
     if abs(xAxis) < DEAD_ZONE and abs(yAxis) < DEAD_ZONE:
         return None
@@ -545,6 +561,7 @@ def joystickDirection(xAxis, yAxis):
             return 'down'
         else:
             return 'up'
+
 
 def keyAngle(keys):  # given a set of inputs, return the angle that corresponds to those inputs
     right = False
@@ -580,6 +597,7 @@ def keyAngle(keys):  # given a set of inputs, return the angle that corresponds 
         return 0
     elif down:
         return 270
+
 
 def keyDirection(keys):
     if keys[pygame.K_w] or keys[pygame.K_p]:

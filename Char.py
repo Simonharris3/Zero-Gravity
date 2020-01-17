@@ -19,14 +19,9 @@ TEXT_COLOR = (0, 0, 0)
 SAME_BOOST_CONSTANT = 0.5
 OPPOSITE_BOOST_CONSTANT = 0.8 / 0.5
 
-class Char(pygame.sprite.Sprite):
-    # TODO: add shield destination location to character file
-    #   read in the sprite location (and destination locations) for the shield, and add it to the move list.
-    #   Detect input from controller for where the shield is angled, and use that to determine the offset of the shield sprite
-    #   Call the shield function, and start the shield animation when it is called
-    #   Make shield class extending animation, creating a 'shieldbox' in its act function with the given offset and orientation
-    #   Detect collisions between hitboxes and shields, and end a move when it hits a shield
+NUM_SHIELD_POSITIONS = 8
 
+class Char(pygame.sprite.Sprite):
     def __init__(self, name, game, player):
         pygame.sprite.Sprite.__init__(self)
 
@@ -38,7 +33,10 @@ class Char(pygame.sprite.Sprite):
 
         self.canAct = True  # whether the character is in move lag or hitstun
         self.frozen = False  # if a character is frozen, it cannot drift or jump
-        self.unfreezing = False  # character can freeze for 1 frame if this is true
+
+        self.unfreezing = False  # so that the character doesn't immediately freeze after unfreezing
+        self.shielding = False
+        self.shieldAngle = 0  # angle of the shield relative to the character
 
         self.datasheet = open(self.name + '.txt')  # get data from the datasheet
 
@@ -76,12 +74,13 @@ class Char(pygame.sprite.Sprite):
             self.pos = (self.stage.p2start[0] - self.dims[0] + 1, self.stage.p2start[1] - self.dims[1] / 2)
 
         self.moves = {}
+        self.animations = {}
 
         moveNames = ['neutralA', 'forwardA', 'backA', 'upA', 'downA', 'downB']
         throwNames = ['forwardThrow', 'backThrow', 'upThrow', 'downThrow']
 
         self.tetherFile = 'simonbelmont.png'
-        self.shieldFile = 'alucard.png'
+        self.shieldFile = 'alucardfinal.png'
 
         # for each move, read in the data from the file and create its move object
         for i in range(len(moveNames)):
@@ -166,6 +165,7 @@ class Char(pygame.sprite.Sprite):
         for i in range(3):
             next(self.datasheet)
 
+        # tether info
         frames = self.datasheet.readline().split()
         next(self.datasheet)
         startPosText = self.datasheet.readline().split()
@@ -196,6 +196,27 @@ class Char(pygame.sprite.Sprite):
         # create a tether object with all the data read from the file
         self.tetherAnimation = Tether(frames, startPos, grabBoxes, sprites, self.game, self)
 
+        for i in range(3):
+            next(self.datasheet)
+
+        # shield info
+        startPositions = []
+        for i in range(NUM_SHIELD_POSITIONS):
+            startPosText = self.datasheet.readline().split()
+            startPos = (int(startPosText[0]), int(startPosText[1]))
+            startPositions.append(startPos)
+
+        next(self.datasheet)
+
+        rectText = self.datasheet.readline().split()
+        rectData = []
+
+        for i in range(4):
+            rectData.append(int(rectText[i]))
+
+        rect = pygame.Rect(rectData)
+        self.shieldAnimation = Shield(startPositions, rect, self)
+
         self.hitstun = -1  # frames of hitstun remaining
         self.health = self.startingHealth  # starting health
         self.healthBar = pygame.Rect(0, 0, self.dims[0], HEALTH_BAR_WIDTH)
@@ -221,7 +242,7 @@ class Char(pygame.sprite.Sprite):
             self.onWall = [self.stage.rightWall]  # which wall(s) the character is on, if any
 
     def jump(self, angle):  # character jumps off the wall based on input
-        if not self.frozen:
+        if not self.frozen and not self.shielding:
             self.xVelocity = round(math.cos(math.radians(angle)), 2) * self.jumpSpeed
             self.yVelocity = round(-1 * math.sin(math.radians(angle)), 2) * self.jumpSpeed
             self.leaveWall()
@@ -281,6 +302,8 @@ class Char(pygame.sprite.Sprite):
     def update(self):  # operations that must be done every frame
         # if self.frozen:
         #     print('Hitstun: ' + str(self.hitstun))
+        # if isinstance(self.currMove, Shield):
+        #     print(self.currMove.frame)
 
         if self.health <= 0:
             self.game.end(self)
@@ -301,6 +324,7 @@ class Char(pygame.sprite.Sprite):
             value.update()
 
         self.tetherAnimation.update()
+        self.shieldAnimation.update()
 
     def updateCanAct(self):  # updates whether or not the character can act
         if self.hitstun != -1:
@@ -365,6 +389,8 @@ class Char(pygame.sprite.Sprite):
             sides = self.stage.wallSide(self, walls=self.onWall)
 
             print('Sides: ' + str(sides))
+            print('Position: ' + str(self.pos))
+            print('Wall: ' + str(self.stage.walls[1]))
 
             for i in range(len(sides)):
                 self.side = sides[i]
@@ -440,6 +466,9 @@ class Char(pygame.sprite.Sprite):
 
         self.canAct = False
         self.hitstun = int(hitbox.knockback * HITSTUN_CONSTANT)
+
+        if self.currMove is not None:
+            self.currMove.end()
 
         # print('Knockback: %d, Angle: %d, Damage: %d' % (hitbox.knockback, hitbox.angle, hitbox.damage))
         # print('Is currmove: ' + str(hitbox.move == self.game.playChars[0].currMove))
@@ -530,9 +559,13 @@ class Char(pygame.sprite.Sprite):
             print('down throw performed')
             self.moves['downThrow'].start()
 
-    def shield(self):
-        # think about ideas for this--possibly a directional reflector shield that lasts for a short amount of time and has ending lag
-        pass
+    def shield(self, angle):
+        if self.canAct:
+            if angle != -1:
+                self.shieldAngle = angle
+            else:
+                self.shieldAngle = 0
+            self.shieldAnimation.start()
 
     def boost(self, angle):
         xBoost = math.cos(math.radians(angle)) * self.jumpSpeed * SAME_BOOST_CONSTANT
@@ -580,7 +613,7 @@ class TextButton:
 
     def draw(self):
         pygame.draw.rect(self.game.screen, (0, 0, 0), self.rect, 2)
-        self.game.displayText(self.words, self.textSize, self.rect, START_COLOR, self.textColor)
+        self.game.displayText(self.words, self.textSize, self.rect, self.textColor)
 
     def clicked(self, pos):
         return self.rect.collidepoint(pos)
@@ -601,7 +634,7 @@ class ImageButton:
         yPos = self.rect.y + self.image.get_height()
         length = self.rect.width
         height = self.rect.height - self.image.get_height()
-        self.game.displayText(self.text, self.textSize, pygame.Rect(xPos, yPos, length, height), START_COLOR, TEXT_COLOR)
+        self.game.displayText(self.text, self.textSize, pygame.Rect(xPos, yPos, length, height), TEXT_COLOR)
 
     def clicked(self, pos):
         return self.rect.collidepoint(pos)

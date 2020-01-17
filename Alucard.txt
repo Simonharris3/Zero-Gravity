@@ -4,7 +4,7 @@ Health: 40
 Air speed: 3
 Sprites: alucardfinal.png
 Default sprite: xpos ypos xlen ylen hurtbox_xpos hurtbox_ypos hurtbox_xlen hurtbox_ylen
-40 180 130 111
+236 326 114 116
 Wall sprite: xpos ypos xlen ylen hurtbox_xpos hurtbox_ypos hurtbox_xlen hurtbox_ylen
 170 40 120 75
 
@@ -260,5 +260,15 @@ Sprites: (Character)
 310 1398 154 102
 310 1398 154 102
 
-Shield sprite:
+Shield:
+Start positions:
+105 -10
+70 -30
+0 -30
+-30 -40
+-30 -10
+-50 50
+0 100
+60 60
+Sprite:
 389 4909 116 42

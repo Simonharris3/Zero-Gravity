@@ -1,10 +1,13 @@
 import pygame
 
-THROW_WIDTH = 1000
-THROW_HEIGHT = 1000
+# THROW_WIDTH = 1000
+# THROW_HEIGHT = 1000
+
+SHIELD_MULTIPLE = 45
+SHIELD_KNOCKBACK = 2
 
 class Animation:
-    def __init__(self, frameData, sprites, tetherFile, game, char):
+    def __init__(self, frameData, sprites, specialFile, game, char):
         self.activeframe = int(frameData[0])  # when the hitbox comes out
         self.inactiveframe = int(frameData[1])  # when the hitbox goes away
         self.endframe = int(frameData[2])  # when the endlag stops
@@ -15,8 +18,11 @@ class Animation:
         # sprites of the character when the move is active, in order of when they appear
         self.sprites = sprites
         # print(spriteFile)
-        if tetherFile:
-            self.spriteFile = char.tetherFile
+        if specialFile is not None:
+            if specialFile == 'tether':
+                self.spriteFile = char.tetherFile
+            if specialFile == 'shield':
+                self.spriteFile = char.shieldFile
         else:
             self.spriteFile = char.spriteFile
         self.spriteSheet = pygame.image.load(self.spriteFile).convert()
@@ -27,6 +33,7 @@ class Animation:
         self.spriteIndex = 0
 
         self.frame = -1  # how many frames the move has been out (starting at 1)
+        # how many frames each sprite lasts for
         self.frameWait = (self.inactiveframe - self.activeframe) / len(self.sprites)
         if self.frameWait % 1 != 0:
             raise ValueError('Number of frames move is active is not divisible by number of sprites ')
@@ -36,11 +43,14 @@ class Animation:
         self.paused = False
 
     def update(self):
-        # print('tether updating')
+        # if isinstance(self, Shield):
+        #     print('shield updating, frame ' + str(self.frame))
         if self.frame > -1:
-            # print('tether advancing frames')
+            # if isinstance(self, Shield):
+            #     print('shield advancing frames')
             if not self.paused:
-                # print('tether not paused')
+                # if isinstance(self, Shield):
+                #     print('shield not paused')
                 self.frame += 1
 
                 if self.frame >= self.endframe:
@@ -58,12 +68,15 @@ class Animation:
                 self.act()
 
     def start(self):
-        # print("tether starting")
+        # if isinstance(self, Shield):
+        #     print('shield starting')
         self.frame = 0
         self.char.currMove = self
         self.char.canAct = False
+        # print('frame: ' + str(self.frame))
 
     def end(self):
+        # print('shield ending')
         self.frame = -1
         self.spriteIndex = 0
 
@@ -75,7 +88,7 @@ class Animation:
         self.paused = False
 
     def deactivate(self):
-        print('deactivating')
+        # print('deactivating')
         self.active = False
 
     def act(self):
@@ -83,7 +96,7 @@ class Animation:
 
 class Attack(Animation):
     def __init__(self, frameData, damage, knockback, angle, hitboxes, sprites, game, char):
-        super().__init__(frameData, sprites, False, game, char)
+        super().__init__(frameData, sprites, None, game, char)
         # other attributes can be added later including multiple hitboxes, etc.
 
         # if self.spriteFile == self.char.tetherFile:
@@ -110,9 +123,22 @@ class Attack(Animation):
             # if self.throw:
             #     print('Adding throw hitbox at ' + str(loc))
 
+class Throw(Attack):
+    def __init__(self, frames, damage, knockback, angle, hitboxes, sprites, game, char):
+        super().__init__(frames, damage, knockback, angle, hitboxes, sprites, game, char)
+
+    def act(self):
+        self.char.currSprite = self.sprites[self.spriteIndex]
+
+        if self.active:
+            self.char.opponent.hit(ThrowHitbox(self.damage, self.knockback, self.angle, self))
+            self.char.xVelocity = -1 * self.char.opponent.xVelocity
+            self.char.yVelocity = -1 * self.char.opponent.yVelocity
+            self.deactivate()
+
 class Tether(Animation):
     def __init__(self, frameData, startPos, grabBoxes, sprites, game, char):
-        super().__init__(frameData, sprites, True, game, char)
+        super().__init__(frameData, sprites, 'tether', game, char)
         self.grabBoxes = grabBoxes
         self.startPos = startPos
 
@@ -124,11 +150,11 @@ class Tether(Animation):
         if self.active:
             # print('Index: ' + str(self.spriteIndex))
 
-            # hitbox location (later becomes aligned with the character's location)
-            loc = self.grabBoxes[self.spriteIndex]
+            # hitbox location for the sprite (later becomes aligned with the character's location)
+            rect = self.grabBoxes[self.spriteIndex]
 
             # create a hitbox with the relevant properties and add it to the character's list of active hitboxes
-            self.char.hitboxes.append(GrabBox(loc, self.startPos, self.char.lookingLeft, self))
+            self.char.hitboxes.append(GrabBox(rect, self.startPos, self.char.lookingLeft, self))
 
     def pause(self):
         self.paused = True
@@ -146,44 +172,17 @@ class Tether(Animation):
             self.char.grabbing.leaveWall()
             self.char.grabbing = None
 
-class Throw(Attack):
-    def __init__(self, frames, damage, knockback, angle, hitboxes, sprites, game, char):
-        super().__init__(frames, damage, knockback, angle, hitboxes, sprites, game, char)
+class Shield(Animation):
+    def __init__(self, startPositions, rect, char):
+        self.startPositions = startPositions
+        self.rect = rect
+        super().__init__([1, 2, 2], [char.defaultSprite], 'shield', char.game, char)
 
     def act(self):
-        self.char.currSprite = self.sprites[self.spriteIndex]
-
+        # print('shield active: ' + str(self.active))
         if self.active:
-            self.char.opponent.hit(ThrowHitbox(self.damage, self.knockback, self.angle, self))
-            self.char.xVelocity = -1 * self.char.opponent.xVelocity
-            self.char.yVelocity = -1 * self.char.opponent.yVelocity
-            self.deactivate()
-
-class ShieldBox(pygame.sprite.Sprite):
-    def __init__(self, rect, flipped, move):
-        pygame.sprite.Sprite.__init__(self)
-        self.shape = rect
-        self.move = move
-        self.spriteSheet = self.move.spriteSheet
-        self.char = self.move.char
-
-        if not flipped:
-            xOffset = self.shape.x - self.char.currSprite[0]
-        else:
-            xOffset = self.char.currSprite[0] + self.char.currSprite[2] - (self.shape.x + self.shape.width)
-        yOffset = self.shape.y - self.char.currSprite[1]
-
-        xPos = self.char.pos[0] + xOffset
-        yPos = self.char.pos[1] + yOffset
-
-        self.rect = pygame.Rect(xPos, yPos, self.shape.width, self.shape.height)
-
-        self.image = self.spriteSheet.subsurface(self.shape).copy()
-
-        if flipped:
-            self.image = pygame.transform.flip(self.image, True, False)
-
-        self.mask = pygame.mask.from_surface(self.image)
+            # angle = (self.char.shieldAngle + 180) % 360
+            self.char.hitboxes.append(ShieldBox(self.rect, self.startPositions, self.char.shieldAngle, self))
 
 class Hitbox(pygame.sprite.Sprite):
     def __init__(self, shape, damage, knockback, angle, flipped, move):
@@ -239,6 +238,26 @@ class Hitbox(pygame.sprite.Sprite):
     def draw(self):
         pass
 
+class ShieldBox(Hitbox):
+    def __init__(self, rect, startPositions, angle, move):
+        super().__init__(rect, 0, SHIELD_KNOCKBACK, angle, False, move)
+        # print('angle: ' + str(angle))
+        self.angle = 90 - angle
+        startPos = startPositions[int(angle/SHIELD_MULTIPLE)]
+        self.image = pygame.transform.rotate(self.image, angle+90)
+
+        self.rect = self.rect.move((self.char.pos[0] + startPos[0] - self.rect.x,
+                                    self.char.pos[1] + startPos[1] - self.rect.y))
+
+    def hit(self, hitbox):
+        super().hit(hitbox.char)
+        # self.char.hitstun = shield stun
+        hitbox.move.end()
+
+    def draw(self):
+        # print('draw shield at: ' + str((self.rect.x, self.rect.y)))
+        self.move.game.screen.blit(self.image, (self.rect.x, self.rect.y))
+
 class GrabBox(Hitbox):
     def __init__(self, rect, startPos, flipped, move):
         super().__init__(rect, None, None, None, flipped, move)
@@ -271,19 +290,19 @@ class GrabBox(Hitbox):
 
 class ThrowHitbox(Hitbox):
     def __init__(self, damage, knockback, angle, move):
-        super().__init__(pygame.Rect(0, 0, THROW_WIDTH, THROW_HEIGHT), damage, knockback, angle, False, move)
+        super().__init__(pygame.Rect(0, 0, 0, 0), damage, knockback, angle, False, move)
 
-class Projectile(Hitbox):
-    def __init__(self, image):
-        pass
+# class Projectile(Hitbox):
+    # def __init__(self, image):
+      #   pass
         # init the hitbox
 
         # self.image =
         # self.velocity = (x,y)
 
-    def update(self):
-        pass
-        # move based on velocity
-
-    def draw(self):
-        pass
+    # def update(self):
+    #     pass
+    #     # move based on velocity
+    #
+    # def draw(self):
+    #     pass

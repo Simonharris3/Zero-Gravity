@@ -88,10 +88,11 @@ class Stage:
                 elif char.pos[1] < wall.y:
                     sides.append('up')  # character is above the wall
                 else:
-                    r = wall.x + wall.w - 1 - char.pos[0]  # how close a character is to the right side of the wall
-                    l = char.pos[0] - wall.x  # ' ' left side
-                    t = char.pos[1] - wall.y  # ' ' top
-                    b = wall.y + wall.h - 1 - char.pos[1]  # ' ' bottom
+                    char.center = ((char.pos[0] + char.dims[0]) / 2, (char.pos[1] + char.dims[1]) / 2)
+                    r = wall.x + wall.w - 1 - char.center[0]  # how close a character is to the right side of the wall
+                    l = char.center[0] - wall.x  # ' ' left side
+                    t = char.center[1] - wall.y  # ' ' top
+                    b = wall.y + wall.h - 1 - char.center[1]  # ' ' bottom
 
                     if min(r, l, t, b) == r:
                         sides.append('right')
