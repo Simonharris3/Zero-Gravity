@@ -4,7 +4,8 @@ import pygame
 # THROW_HEIGHT = 1000
 
 SHIELD_MULTIPLE = 45
-SHIELD_KNOCKBACK = 2
+SHIELD_KNOCKBACK = 3
+
 
 class Animation:
     def __init__(self, frameData, sprites, specialFile, game, char):
@@ -94,6 +95,7 @@ class Animation:
     def act(self):
         pass
 
+
 class Attack(Animation):
     def __init__(self, frameData, damage, knockback, angle, hitboxes, sprites, game, char):
         super().__init__(frameData, sprites, None, game, char)
@@ -118,10 +120,11 @@ class Attack(Animation):
             loc = self.hitboxes[self.spriteIndex]
 
             # create a hitbox with the relevant properties and add it to the character's list of active hitboxes
-            self.char.hitboxes.append(Hitbox(loc, self.damage, self.knockback, self.angle, self.char.lookingLeft, self))
+            self.char.effectBoxes.append(Hitbox(loc, self.damage, self.knockback, self.angle, self.char.lookingLeft, self))
 
             # if self.throw:
             #     print('Adding throw hitbox at ' + str(loc))
+
 
 class Throw(Attack):
     def __init__(self, frames, damage, knockback, angle, hitboxes, sprites, game, char):
@@ -135,6 +138,7 @@ class Throw(Attack):
             self.char.xVelocity = -1 * self.char.opponent.xVelocity
             self.char.yVelocity = -1 * self.char.opponent.yVelocity
             self.deactivate()
+
 
 class Tether(Animation):
     def __init__(self, frameData, startPos, grabBoxes, sprites, game, char):
@@ -154,7 +158,7 @@ class Tether(Animation):
             rect = self.grabBoxes[self.spriteIndex]
 
             # create a hitbox with the relevant properties and add it to the character's list of active hitboxes
-            self.char.hitboxes.append(GrabBox(rect, self.startPos, self.char.lookingLeft, self))
+            self.char.effectBoxes.append(GrabBox(rect, self.startPos, self.char.lookingLeft, self))
 
     def pause(self):
         self.paused = True
@@ -172,6 +176,7 @@ class Tether(Animation):
             self.char.grabbing.leaveWall()
             self.char.grabbing = None
 
+
 class Shield(Animation):
     def __init__(self, startPositions, rect, char):
         self.startPositions = startPositions
@@ -182,24 +187,17 @@ class Shield(Animation):
         # print('shield active: ' + str(self.active))
         if self.active:
             # angle = (self.char.shieldAngle + 180) % 360
-            self.char.hitboxes.append(ShieldBox(self.rect, self.startPositions, self.char.shieldAngle, self))
+            self.char.effectBoxes.append(ShieldBox(self.rect, self.startPositions, self.char.shieldAngle, self))
 
-class Hitbox(pygame.sprite.Sprite):
-    def __init__(self, shape, damage, knockback, angle, flipped, move):
+
+class EffectBox(pygame.sprite.Sprite):
+    def __init__(self, shape, flipped, move):
         pygame.sprite.Sprite.__init__(self)
 
         self.shape = shape
-        self.damage = damage
-        self.knockback = knockback
-        self.angle = angle  # knockback angle
         self.move = move
         self.char = self.move.char
         self.spriteSheet = self.move.spriteSheet
-
-        # if flipped and self.knockback is not None:
-        #     self.knockback *= -1
-
-        # print("Throw location: " + str(throwLocation))
 
         if not flipped:
             xOffset = self.shape.x - self.char.currSprite[0]
@@ -210,62 +208,68 @@ class Hitbox(pygame.sprite.Sprite):
         xPos = self.char.pos[0] + xOffset
         yPos = self.char.pos[1] + yOffset
 
-        # print("Shape.x: %d\nCurrsprite.x: %d" % (self.shape.x, self.char.currSprite[0]))
-        # print("Char pos: %d\nHitbox pos: %d" % (self.char.pos[0], xPos))
-
         self.rect = pygame.Rect(xPos, yPos, self.shape.width, self.shape.height)
 
-        # print(self.shape)
-        try:
-            self.image = self.spriteSheet.subsurface(self.shape).copy()
+        self.image = self.spriteSheet.subsurface(self.shape).copy()
 
-            if flipped:
-                self.image = pygame.transform.flip(self.image, True, False)
+        if flipped:
+            self.image = pygame.transform.flip(self.image, True, False)
 
-            self.mask = pygame.mask.from_surface(self.image)
-        except ValueError:
-            self.image = None
-            self.mask = None
+        self.mask = pygame.mask.from_surface(self.image)
 
-        # print('Self.rect: ' + str(self.rect))
-        # print('currSprite location: (%d,%d)' % (self.char.currSprite[0], self.char.currSprite[1]))
+    def hit(self, obj):
+        pass
+
+    def draw(self):
+        pass
+
+
+class Hitbox(EffectBox):
+    def __init__(self, shape, damage, knockback, angle, flipped, move):
+        super().__init__(shape, flipped, move)
+
+        self.damage = damage
+        self.knockback = knockback
+        self.angle = angle  # knockback angle
 
     def hit(self, char):
         # print('hitbox hit')
         char.hit(self)
 
-    # for tethers and projectiles
-    def draw(self):
-        pass
 
-class ShieldBox(Hitbox):
+class ShieldBox(EffectBox):
     def __init__(self, rect, startPositions, angle, move):
-        super().__init__(rect, 0, SHIELD_KNOCKBACK, angle, False, move)
-        # print('angle: ' + str(angle))
-        self.angle = 90 - angle
-        startPos = startPositions[int(angle/SHIELD_MULTIPLE)]
-        self.image = pygame.transform.rotate(self.image, angle+90)
+        super().__init__(rect, False, move)
+        print('angle: ' + str(angle))
+
+        self.angle = angle
+        startPos = startPositions[int(angle / SHIELD_MULTIPLE)]
+        self.image = pygame.transform.rotate(self.image, angle + 90)
+        self.mask = pygame.mask.from_surface(self.image)
 
         self.rect = self.rect.move((self.char.pos[0] + startPos[0] - self.rect.x,
                                     self.char.pos[1] + startPos[1] - self.rect.y))
 
     def hit(self, hitbox):
-        super().hit(hitbox.char)
+        if self.char.lookingLeft:
+            angle = flip(self.angle)
+        else:
+            angle = self.angle
+        hitbox.char.hit(Hitbox(pygame.Rect(0, 0, 0, 0), 0, SHIELD_KNOCKBACK, angle, False, self.move))
         # self.char.hitstun = shield stun
-        hitbox.move.end()
 
     def draw(self):
         # print('draw shield at: ' + str((self.rect.x, self.rect.y)))
         self.move.game.screen.blit(self.image, (self.rect.x, self.rect.y))
 
-class GrabBox(Hitbox):
+
+class GrabBox(EffectBox):
     def __init__(self, rect, startPos, flipped, move):
-        super().__init__(rect, None, None, None, flipped, move)
+        super().__init__(rect, flipped, move)
 
         if not flipped:
             xOffset = startPos[0]
         else:
-            # print('Width: ' + str(self.rect.width))
             xOffset = self.char.dims[0] - startPos[0] - self.rect.width
 
         self.rect = self.rect.move((self.char.pos[0] + xOffset - self.rect.x,
@@ -288,21 +292,32 @@ class GrabBox(Hitbox):
         # self.image = pygame.transform.rotate(self.image, 45)
         self.move.game.screen.blit(self.image, (self.rect.x, self.rect.y))
 
+
 class ThrowHitbox(Hitbox):
     def __init__(self, damage, knockback, angle, move):
         super().__init__(pygame.Rect(0, 0, 0, 0), damage, knockback, angle, False, move)
 
 # class Projectile(Hitbox):
-    # def __init__(self, image):
-      #   pass
-        # init the hitbox
+# def __init__(self, image):
+#   pass
+# init the hitbox
 
-        # self.image =
-        # self.velocity = (x,y)
+# self.image =
+# self.velocity = (x,y)
 
-    # def update(self):
-    #     pass
-    #     # move based on velocity
-    #
-    # def draw(self):
-    #     pass
+# def update(self):
+#     pass
+#     # move based on velocity
+#
+# def draw(self):
+#     pass
+
+def flip(angle):
+    if angle == 0:
+        return 180
+    if angle == 45 or angle == 225:
+        return angle + 90
+    if angle == 315 or angle == 135:
+        return angle - 90
+    if angle == 180:
+        return 0

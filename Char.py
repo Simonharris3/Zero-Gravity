@@ -221,7 +221,7 @@ class Char(pygame.sprite.Sprite):
         self.health = self.startingHealth  # starting health
         self.healthBar = pygame.Rect(0, 0, self.dims[0], HEALTH_BAR_WIDTH)
 
-        self.hitboxes = []  # current active hitboxes
+        self.effectBoxes = []  # current active effect boxes (shields, hitboxes, grab boxes)
         self.currMove = None  # the character's active move, if any
         self.grabbing = None  # whether the character is currently grabbing another character
 
@@ -254,7 +254,7 @@ class Char(pygame.sprite.Sprite):
                 self.lookingLeft = False
 
     def drift(self, angle):  # move through the air in the direction being held
-        if not self.frozen:
+        if not self.frozen and not self.shielding:
             x = math.cos(math.radians(angle)) * self.driftSpeed  # movement in the x direction
             y = -1 * math.sin(math.radians(angle)) * self.driftSpeed  # y direction
             self.move(x, y)
@@ -288,16 +288,16 @@ class Char(pygame.sprite.Sprite):
         # if self.pos was used, sprite would appear hovering on right wall
         self.screen.blit(sprite, (self.rect.x, self.rect.y))
 
-        for hitbox in self.hitboxes:  # draw the outline of the hitboxes
+        for effectBox in self.effectBoxes:  # draw the outline of the hitboxes
             # draw tethers and projectiles
-            hitbox.draw()
+            effectBox.draw()
             # pygame.draw.rect(self.screen, pygame.Color('Red'), hitbox.rect)
 
-            # outline = hitbox.mask.outline()
-            # print('Outline exists: ' + str(len(outline) > 0))
-            # for point in outline:
-              #   pygame.draw.circle(self.screen, pygame.Color('Red'),
-                #                   (point[0] + hitbox.rect.x, point[1] + hitbox.rect.y), 0)
+            outline = effectBox.mask.outline()
+            print('Outline exists: ' + str(len(outline) > 0))
+            for point in outline:
+                pygame.draw.circle(self.screen, pygame.Color('Red'),
+                                   (point[0] + effectBox.rect.x, point[1] + effectBox.rect.y), 0)
 
     def update(self):  # operations that must be done every frame
         # if self.frozen:
@@ -318,7 +318,7 @@ class Char(pygame.sprite.Sprite):
 
     def updateMoves(self):
         # clear hitboxes so they can be updated on the next frame
-        self.hitboxes = []
+        self.effectBoxes = []
 
         for key, value in self.moves.items():
             value.update()
@@ -382,7 +382,7 @@ class Char(pygame.sprite.Sprite):
             if self.currMove is not None:
                 self.currMove.end()
 
-            self.hitboxes = []
+            self.effectBoxes = []
             self.onWall.append(wall)
             self.updateSprite()
 
@@ -446,19 +446,22 @@ class Char(pygame.sprite.Sprite):
         # update the health bar
         self.healthBar = pygame.Rect(0, 0, self.dims[0] * self.health / self.startingHealth, HEALTH_BAR_WIDTH)
 
-        # if self.health <= 0:
-        #     self.game.end(self)
-
         # Maybe change to: use the centers of each rectangle to determine the general direction the character will be sent in
         #  (i.e. the sign of the x and y velocity)
         #  the character will be sent in the opposite direction of the hurtbox
         #  the magnitude of the x and y velocity will be determined by the knockback and knockback angle of the hitbox
+        # TODO: change how mass affects knockback
         if not self.onWall:
             if hitbox.char.lookingLeft:
-                self.xVelocity = -1 * math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
+                self.xVelocity = -1 * math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
             else:
-                self.xVelocity = math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
-            self.yVelocity = math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
+                self.xVelocity = math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
+            self.yVelocity = -1 * math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
+
+        if hitbox.angle == 45:
+            print('looking left: ' + str(hitbox.char.lookingLeft))
+            print('cosine: ' + str(math.cos(math.radians(hitbox.angle))))
+            print('x velocity: ' + str(self.xVelocity))
 
         if self.hitstun != -1:
             print('Combo!')

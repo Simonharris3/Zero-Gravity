@@ -10,7 +10,7 @@ Wall sprite: xpos ypos xlen ylen hurtbox_xpos hurtbox_ypos hurtbox_xlen hurtbox_
 
 Neutral A:
 Frame data: Active Inactive End
-10 25 50
+10 35 50
 Damage 3
 Knockback 7
 Angle 90
@@ -44,7 +44,7 @@ Sprites: xpos ypos xlen ylen
 
 Back A:
 Frame data: Active Inactive End
-10 25 50
+10 35 50
 Damage 3
 Knockback 7
 Angle 270
@@ -272,3 +272,18 @@ Start positions:
 60 60
 Sprite:
 389 4909 116 42
+
+Jump animation sprites: 3
+46 514 119 125
+196 514 123 102
+342 513 130 92
+
+Death animation sprites: 6
+56 5010 129 109
+209 5010 123 107
+346 5012 120 104
+59 5119 111 104
+218 5131 115 82
+366 5125 114 95
+Final sprite:
+373 5240 128 44

@@ -1,10 +1,11 @@
 # TODO LIST:
 #          Death, jumping, etc animation
+#          Add new characters
 
 # TODO FUTURE:
-#          Fix wall collision by keeping track of a character that had previously
-#          Add new characters
+#          Fix wall collision by keeping track of a character that had recently left a wall
 #          Allow tethers to be angled and to snap to the wall
+#          Fix throw bug: what if a character hits a wall before the throw is over?
 #          Allow characters to move out of corners more easily
 #          Allow characters to change direction at will
 #          Landing lag
@@ -72,7 +73,6 @@ C_STICK_HORIZONTAL = 3
 DEAD_ZONE = 0.3
 DIAG_DEAD_ZONE = 0.15
 SINGLE_DIRECTION_BUFFER = 0.2
-
 
 class ZeroGravity:
     def __init__(self):
@@ -445,23 +445,16 @@ class ZeroGravity:
                         # if char == self.playChars[0]:
                         #   print('x: %d, y:%d' % (char.pos[0], char.pos[1]))
 
-            for c2 in self.playChars:
-                if c2 is not char:
-                    for box in char.hitboxes:
-                        if not isinstance(box, ShieldBox):
-                            if pygame.sprite.collide_mask(box, c2):
-                                box.hit(c2)  # the character gets hit
-                                if char.currMove is not None:
-                                    char.currMove.deactivate()  # deactivate the hitbox so it doesn't keep hitting
-                        else:
-                            for box2 in c2.hitboxes:
-                                if not isinstance(box2, GrabBox) and not isinstance(box2, Shield) and \
-                                        pygame.sprite.collide_mask(box, box2):
-                                    box.hit(box2)
+            c1 = self.playChars[0]
+            c2 = self.playChars[1]
+            shieldCollision(c1, c2)
+            shieldCollision(c2, c1)
+            boxCollision(c1, c2)
+            boxCollision(c2, c1)
 
-                    # TODO: handle character collision
-                    # if pygame.sprite.collide_mask(char, c2):
-                    # print('character collision')
+            # TODO: handle character collision
+            # if pygame.sprite.collide_mask(char, c2):
+            # print('character collision')
 
     def end(self, loser):
         print('Player %d wins!' % ((loser.player + 1) % 2 + 1))
@@ -481,6 +474,20 @@ class ZeroGravity:
         # pygame.draw.rect(self.screen, bkgColor, textpos)
         self.screen.blit(text, textpos)
 
+def shieldCollision(c1: Char, c2: Char):
+    for box in c1.effectBoxes:
+        if isinstance(box, ShieldBox):
+            for box2 in c2.effectBoxes:
+                if isinstance(box2, Hitbox) and pygame.sprite.collide_mask(box, box2):
+                    box.hit(box2)
+
+def boxCollision(c1: Char, c2: Char):
+    for box in c1.effectBoxes:
+        if not isinstance(box, ShieldBox):
+            if pygame.sprite.collide_mask(box, c2):
+                box.hit(c2)  # the character gets hit
+                if c1.currMove is not None:
+                    c1.currMove.deactivate()  # deactivate the hitbox so it doesn't keep hitting
 
 # given a set of joystick inputs, return the angle that corresponds to those inputs
 def joystickAngle(xAxis, yAxis):
