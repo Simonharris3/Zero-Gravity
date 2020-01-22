@@ -11,8 +11,6 @@ IMAGE_BUTTON_SPACE = 5
 
 MOVE_OFF_WALL = (15, 25)
 
-DATA_DIVIDER_INDEX = 4
-
 START_COLOR = (60, 100, 140)
 TEXT_COLOR = (0, 0, 0)
 
@@ -20,6 +18,11 @@ SAME_BOOST_CONSTANT = 0.5
 OPPOSITE_BOOST_CONSTANT = 0.8 / 0.5
 
 NUM_SHIELD_POSITIONS = 8
+
+JUMP_FRAME_DATA = [1, 16, 16]
+DEATH_FRAME_DATA = [1, 79, 79]
+
+END_FRAMES = 10
 
 class Char(pygame.sprite.Sprite):
     def __init__(self, name, game, player):
@@ -37,6 +40,9 @@ class Char(pygame.sprite.Sprite):
         self.unfreezing = False  # so that the character doesn't immediately freeze after unfreezing
         self.shielding = False
         self.shieldAngle = 0  # angle of the shield relative to the character
+
+        self.fallingToDeath = False
+        self.endTimer = -1
 
         self.datasheet = open(self.name + '.txt')  # get data from the datasheet
 
@@ -98,7 +104,7 @@ class Char(pygame.sprite.Sprite):
                 data = self.datasheet.readline().split()
                 hitbox = []
 
-                for c in range(DATA_DIVIDER_INDEX):
+                for c in range(4):
                     hitbox.append(int(data[c]))
 
                 # if data[-1] == "True":
@@ -141,8 +147,8 @@ class Char(pygame.sprite.Sprite):
                 data = self.datasheet.readline().split()
                 hitbox = []
 
-                for c in range(DATA_DIVIDER_INDEX):
-                    hitbox.append(int(data[c]))
+                for datum in data:
+                    hitbox.append(int(datum))
 
                 hitboxes.append(pygame.Rect(hitbox))
 
@@ -177,8 +183,8 @@ class Char(pygame.sprite.Sprite):
             data = self.datasheet.readline().split()
             grabBox = []
 
-            for c in range(len(data)):
-                grabBox.append(int(data[c]))
+            for datum in data:
+                grabBox.append(int(datum))
 
             grabBoxes.append(pygame.Rect(grabBox))
 
@@ -211,11 +217,47 @@ class Char(pygame.sprite.Sprite):
         rectText = self.datasheet.readline().split()
         rectData = []
 
-        for i in range(4):
-            rectData.append(int(rectText[i]))
+        for datum in rectText:
+            rectData.append(int(datum))
 
         rect = pygame.Rect(rectData)
         self.shieldAnimation = Shield(startPositions, rect, self)
+
+        next(self.datasheet)
+
+        numJumpSprites = int(self.datasheet.readline()[24:])
+
+        sprites = []
+        for k in range(numJumpSprites):
+            data = self.datasheet.readline().split()
+            sprite = []
+            for datum in data:
+                sprite.append(int(datum))
+
+            sprites.append(pygame.Rect(sprite))
+
+        self.jumpAnimation = Jump(JUMP_FRAME_DATA, sprites, None, self.game, self)
+
+        next(self.datasheet)
+        numDeathSprites = int(self.datasheet.readline()[25:])
+
+        sprites = []
+        for k in range(numDeathSprites):
+            data = self.datasheet.readline().split()
+            sprite = []
+            for datum in data:
+                sprite.append(int(datum))
+
+            sprites.append(pygame.Rect(sprite))
+
+        self.deathAnimation = Death(DEATH_FRAME_DATA, sprites, None, self.game, self)
+
+        next(self.datasheet)
+
+        data = self.datasheet.readline().split()
+        self.finalSprite = []
+        for datum in data:
+            self.finalSprite.append(int(datum))
 
         self.hitstun = -1  # frames of hitstun remaining
         self.health = self.startingHealth  # starting health
@@ -241,17 +283,24 @@ class Char(pygame.sprite.Sprite):
             self.orientation = 90
             self.onWall = [self.stage.rightWall]  # which wall(s) the character is on, if any
 
+    def startJump(self, angle):
+        if self.canAct and not self.shielding:
+            self.jumpAnimation.angle = angle
+            self.jumpAnimation.orientation = self.orientation
+            self.jumpAnimation.start()
+
     def jump(self, angle):  # character jumps off the wall based on input
-        if not self.frozen and not self.shielding:
-            self.xVelocity = round(math.cos(math.radians(angle)), 2) * self.jumpSpeed
-            self.yVelocity = round(-1 * math.sin(math.radians(angle)), 2) * self.jumpSpeed
-            self.leaveWall()
+        self.xVelocity = round(math.cos(math.radians(angle)), 2) * self.jumpSpeed
+        self.yVelocity = round(-1 * math.sin(math.radians(angle)), 2) * self.jumpSpeed
+        self.leaveWall()
 
-            if 90 < angle < 270:
-                self.lookingLeft = True
+        if 90 < angle < 270:
+            self.lookingLeft = True
 
-            if angle > 270 or angle < 90:
-                self.lookingLeft = False
+        if angle > 270 or angle < 90:
+            self.lookingLeft = False
+
+        print('start')
 
     def drift(self, angle):  # move through the air in the direction being held
         if not self.frozen and not self.shielding:
@@ -300,12 +349,16 @@ class Char(pygame.sprite.Sprite):
                                    (point[0] + effectBox.rect.x, point[1] + effectBox.rect.y), 0)
 
     def update(self):  # operations that must be done every frame
-        # if self.frozen:
-        #     print('Hitstun: ' + str(self.hitstun))
-        # if isinstance(self.currMove, Shield):
-        #     print(self.currMove.frame)
+        # if self.currMove == self.deathAnimation:
+        #     print('current frame: ' + str(self.currMove.frame))
 
-        if self.health <= 0:
+        if self.health <= 0 and not self.fallingToDeath and \
+                not self.currMove == self.deathAnimation and not self.endTimer > -1:
+            self.die()
+
+        if -1 < self.endTimer < END_FRAMES:
+            self.endTimer += 1
+        elif self.endTimer > -1:
             self.game.end(self)
 
         self.updateOrientation()
@@ -325,6 +378,8 @@ class Char(pygame.sprite.Sprite):
 
         self.tetherAnimation.update()
         self.shieldAnimation.update()
+        self.jumpAnimation.update()
+        self.deathAnimation.update()
 
     def updateCanAct(self):  # updates whether or not the character can act
         if self.hitstun != -1:
@@ -367,16 +422,27 @@ class Char(pygame.sprite.Sprite):
         #     self.lookingLeft = False
 
     def updateSprite(self):
-        if self.onWall:
-            self.currSprite = self.wallSprite
-        elif self.currMove is None:  # **could change
-            self.currSprite = self.defaultSprite
+        if self.fallingToDeath:
+            self.currSprite = self.deathAnimation.sprites[-1]
+        elif self.health <= 0 and not self.currMove == self.deathAnimation:
+            # print('lying dead')
+            self.currSprite = self.finalSprite
+        elif self.currMove is None:
+            if self.onWall:
+                self.currSprite = self.wallSprite
+            else:  # **could change
+                self.currSprite = self.defaultSprite
         self.dims = (self.currSprite[2], self.currSprite[3])
         self.image = self.spriteSheet.subsurface(self.currSprite).copy()
 
     def hitWall(self, wall):
         if wall not in self.onWall and not self.frozen:
-            print('hit wall')
+            if self.health <= 0:
+                self.currSprite = self.finalSprite
+                self.fallingToDeath = False
+                self.endTimer = 0
+
+            # print('hit wall')
             self.canAct = True
 
             if self.currMove is not None:
@@ -388,9 +454,9 @@ class Char(pygame.sprite.Sprite):
 
             sides = self.stage.wallSide(self, walls=self.onWall)
 
-            print('Sides: ' + str(sides))
-            print('Position: ' + str(self.pos))
-            print('Wall: ' + str(self.stage.walls[1]))
+            # print('Sides: ' + str(sides))
+            # print('Position: ' + str(self.pos))
+            # print('Wall: ' + str(self.stage.walls[1]))
 
             for i in range(len(sides)):
                 self.side = sides[i]
@@ -409,19 +475,15 @@ class Char(pygame.sprite.Sprite):
                     self.pos = (self.pos[0], wall.y - self.dims[1] + 1)
                     # print('up')
 
-            for wall in self.onWall:
-                if wall == self.stage.walls[0]:
-                    print('On left wall')
-                if wall == self.stage.walls[1]:
-                    print('On up wall')
-                if wall == self.stage.walls[2]:
-                    print('On right wall')
-                if wall == self.stage.walls[3]:
-                    print('On down wall')
-
-            # print('Pos: (%d,%d)' % (self.pos[0], self.pos[1]))
-            # self.game.screen.fill(pygame.Color('Red'), pygame.Rect(500, 200, 10, 10))
-            # self.game.screen.fill(pygame.Color('Blue'), pygame.Rect(835, 499, 10, 10))
+            # for wall in self.onWall:
+            #     if wall == self.stage.walls[0]:
+            #         print('On left wall')
+            #     if wall == self.stage.walls[1]:
+            #         print('On up wall')
+            #     if wall == self.stage.walls[2]:
+            #         print('On right wall')
+            #     if wall == self.stage.walls[3]:
+            #         print('On down wall')
 
     def leaveWall(self):
         self.onWall = []
@@ -441,6 +503,8 @@ class Char(pygame.sprite.Sprite):
             self.leaveWall()
 
     def hit(self, hitbox):  # get hit
+        if self.health <= 0:
+            print('no hitting should be occurring')
         self.health -= hitbox.damage  # take the appropriate amount of damage
 
         # update the health bar
@@ -458,10 +522,10 @@ class Char(pygame.sprite.Sprite):
                 self.xVelocity = math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
             self.yVelocity = -1 * math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
 
-        if hitbox.angle == 45:
-            print('looking left: ' + str(hitbox.char.lookingLeft))
-            print('cosine: ' + str(math.cos(math.radians(hitbox.angle))))
-            print('x velocity: ' + str(self.xVelocity))
+        # if hitbox.angle == 45:
+        #     print('looking left: ' + str(hitbox.char.lookingLeft))
+        #     print('cosine: ' + str(math.cos(math.radians(hitbox.angle))))
+        #     print('x velocity: ' + str(self.xVelocity))
 
         if self.hitstun != -1:
             print('Combo!')
@@ -605,6 +669,9 @@ class Char(pygame.sprite.Sprite):
         print('unfrozen')
         self.frozen = False
         self.unfreezing = True
+
+    def die(self):
+        self.deathAnimation.start()
 
 class TextButton:
     def __init__(self, text, size, textColor, rect, game):

@@ -1,4 +1,5 @@
 import pygame
+import traceback
 
 # THROW_WIDTH = 1000
 # THROW_HEIGHT = 1000
@@ -41,25 +42,33 @@ class Animation:
 
         self.frameWait = int(self.frameWait)
 
+        if self.sprites[0] == pygame.Rect(46, 514, 119, 125):
+            print('active frame: %d, inactive frame: %d, frame wait: %d' % (self.activeframe, self.inactiveframe, self.frameWait))
+
         self.paused = False
 
     def update(self):
-        # if isinstance(self, Shield):
-        #     print('shield updating, frame ' + str(self.frame))
+        # if self == self.char.deathAnimation:
+        #     print('death updating, frame ' + str(self.frame))
         if self.frame > -1:
-            # if isinstance(self, Shield):
-            #     print('shield advancing frames')
+            # if self == self.char.deathAnimation:
+            #     print('death advancing frames')
             if not self.paused:
-                # if isinstance(self, Shield):
-                #     print('shield not paused')
+                # if self == self.char.deathAnimation:
+                #     print('not paused, current frame: ' + str(self.frame))
                 self.frame += 1
 
                 if self.frame >= self.endframe:
+                    # if self == self.char.deathAnimation:
+                    #     print('current frame: ' + str(self.frame))
+                    #     print('end frame: ' + str(self.endframe))
                     self.end()
                 elif self.activeframe <= self.frame < self.inactiveframe:
                     if self.frame != self.activeframe:
                         if (self.frame - self.activeframe) % self.frameWait == 0:
                             self.spriteIndex += 1
+                            # if self == self.char.deathAnimation:
+                            #     print('death advancing sprites')
                             # print('Frame: %d, sprite index: %d' % (self.frame, self.spriteIndex))
                     else:
                         self.active = True
@@ -69,12 +78,11 @@ class Animation:
                 self.act()
 
     def start(self):
-        # if isinstance(self, Shield):
-        #     print('shield starting')
+        if self == self.char.deathAnimation:
+            print('death starting')
         self.frame = 0
         self.char.currMove = self
         self.char.canAct = False
-        # print('frame: ' + str(self.frame))
 
     def end(self):
         # print('shield ending')
@@ -93,7 +101,7 @@ class Animation:
         self.active = False
 
     def act(self):
-        pass
+        self.char.currSprite = self.sprites[self.spriteIndex]
 
 
 class Attack(Animation):
@@ -113,7 +121,7 @@ class Attack(Animation):
 
     def act(self):
         # print(self.spriteIndex)
-        self.char.currSprite = self.sprites[self.spriteIndex]
+        super().act()
 
         if self.active:
             # hitbox location, aligned with the character's location
@@ -147,8 +155,7 @@ class Tether(Animation):
         self.startPos = startPos
 
     def act(self):
-        self.char.currSprite = self.sprites[self.spriteIndex]
-
+        super().act()
         # print('Active: ' + str(self.active))
 
         if self.active:
@@ -189,6 +196,34 @@ class Shield(Animation):
             # angle = (self.char.shieldAngle + 180) % 360
             self.char.effectBoxes.append(ShieldBox(self.rect, self.startPositions, self.char.shieldAngle, self))
 
+
+class Death(Animation):
+    def end(self):
+        super().end()
+        self.char.fallingToDeath = True
+        self.char.yVelocity = 3
+
+    def start(self):
+        super().start()
+        self.char.xVelocity = 0
+        self.char.yVelocity = 0
+        self.char.moveOffWall()
+
+class Jump(Animation):
+    def __init__(self, frameData, sprites, specialFile, game, char):
+        super().__init__(frameData, sprites, specialFile, game, char)
+        self.orientation = None
+        self.angle = None
+
+    def act(self):
+        super().act()
+        self.char.orientation = self.orientation
+
+    def end(self):
+        super().end()
+        self.char.jump(self.angle)
+
+###########################################
 
 class EffectBox(pygame.sprite.Sprite):
     def __init__(self, shape, flipped, move):

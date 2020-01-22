@@ -1,5 +1,4 @@
 # TODO LIST:
-#          Death, jumping, etc animation
 #          Add new characters
 
 # TODO FUTURE:
@@ -19,6 +18,7 @@
 import time
 import pygame.key
 import os
+import gc
 
 from Char import *
 from Stage import Stage
@@ -29,7 +29,7 @@ WINDOW_OFFSET_X = 5
 WINDOW_OFFSET_Y = 30  # no idea why but this works
 START_COLOR = (60, 100, 140)  # start screen color
 START_TEXT_COLOR = (0, 0, 0)
-GAME_COLOR = (0, 50, 100)  # game screen color -- possible to make this stage-dependent
+GAME_COLOR = (50, 100, 150)  # game screen color -- possible to make this stage-dependent
 FPS = 60  # 60 frames per second
 
 START_TEXT = 'ZERO GRAVITY'  # text on the start screen
@@ -231,7 +231,7 @@ class ZeroGravity:
                 # if the player angles away from the wall, that character jumps off the wall
                 if self.stage.checkWalls(angle, walls, char1):
                     # print('Joystick angle: ' + str(joystickAngle(controlX, controlY)))
-                    char1.jump(angle)
+                    char1.startJump(angle)
 
             else:
                 if cDirection == 'left':  # if left was inputted
@@ -330,7 +330,7 @@ class ZeroGravity:
                 if (keys[pygame.K_p] or keys[pygame.K_l] or keys[pygame.K_SEMICOLON] or
                     keys[pygame.K_QUOTE]) and walls:
                     if self.stage.checkWalls(keyAngle(keys), walls, char2):
-                        char2.jump(keyAngle(keys))
+                        char2.startJump(keyAngle(keys))
                         # if the player angles away from the wall, that character jumps off the wall
 
             if keys[pygame.K_RSHIFT] and not walls:
@@ -423,45 +423,48 @@ class ZeroGravity:
         self.detectCollisions()  # see if characters have collided with objects, walls, hitboxes, or other characters
 
     def detectCollisions(self):  # see if a character has collided with a wall (other character)
-        for char in self.playChars:  # for every character playing,
-            # TODO: use mask to check if char collides with wall
-            collided = char.rect.collidelist(self.stage.walls)
-            # if char == self.playChars[0] and collided == 2:
-            #     print('collided with right wall')
-            sides = self.stage.wallSide(char, index=collided)
-            if collided != -1:
-                if char.onWall != self.stage.walls[collided]:
-                    # if that character collides with a wall (and is not already on the wall),
-                    # if the character is not moving away from the wall
-                    # (this prevents characters 'colliding' with the wall as they jump off it)
-                    if (('right' in sides and char.xVelocity <= 0) or ('down' in sides and char.yVelocity <= 0) or
-                            ('left' in sides and char.xVelocity >= 0) or ('up' in sides and char.yVelocity >= 0)):
-                        # if char == self.playChars[0] and collided == 2:
-                        #     print('hit right wall')
+        if self.status == 'in game':
+            for char in self.playChars:  # for every character playing,
+                # TODO: use mask to check if char collides with wall
+                collided = char.rect.collidelist(self.stage.walls)
+                # if char == self.playChars[0] and collided == 2:
+                #     print('collided with right wall')
+                sides = self.stage.wallSide(char, index=collided)
+                if collided != -1:
+                    # if char == self.playChars[0]:
+                    #     print('Collided: ' + str(collided))
+                    #     print('Rect: ' + str(char.rect))
+                    if char.onWall != self.stage.walls[collided]:
+                        # if that character collides with a wall (and is not already on the wall),
+                        # if the character is not moving away from the wall
+                        # (this prevents characters 'colliding' with the wall as they jump off it)
+                        if (('right' in sides and char.xVelocity <= 0) or ('down' in sides and char.yVelocity <= 0) or
+                                ('left' in sides and char.xVelocity >= 0) or ('up' in sides and char.yVelocity >= 0)):
+                            # if char == self.playChars[0] and collided == 2:
+                            #     print('hit right wall')
 
-                        char.xVelocity = 0
-                        char.yVelocity = 0  # the character stops moving
-                        char.hitWall(self.stage.walls[collided])
-                        # if char == self.playChars[0]:
-                        #   print('x: %d, y:%d' % (char.pos[0], char.pos[1]))
+                            char.xVelocity = 0
+                            char.yVelocity = 0  # the character stops moving
+                            char.hitWall(self.stage.walls[collided])
+                            # if char == self.playChars[0]:
+                            #   print('x: %d, y:%d' % (char.pos[0], char.pos[1]))
 
-            c1 = self.playChars[0]
-            c2 = self.playChars[1]
-            shieldCollision(c1, c2)
-            shieldCollision(c2, c1)
-            boxCollision(c1, c2)
-            boxCollision(c2, c1)
+                for c2 in self.playChars:
+                    if c2 != char:
+                        shieldCollision(char, c2)
+                        boxCollision(char, c2)
 
-            # TODO: handle character collision
-            # if pygame.sprite.collide_mask(char, c2):
-            # print('character collision')
+                # TODO: handle character collision
+                # if pygame.sprite.collide_mask(char, c2):
+                # print('character collision')
 
     def end(self, loser):
         print('Player %d wins!' % ((loser.player + 1) % 2 + 1))
-        self.draw()
+        # self.draw()
         time.sleep(1)
         self.playChars = []
         self.status = 'char select'
+        gc.collect()
 
     # show text on the screen
     def displayText(self, message, textSize, rect, textColor=(0, 0, 0)):
