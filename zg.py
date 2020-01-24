@@ -40,7 +40,7 @@ BUTTON_TEXT_SIZE = 60  # text on the button will be this big
 BUTTON_CORNER = (0.278 * WIDTH, 0.614 * HEIGHT)  # top left corner of start button
 BUTTON_DIMS = (0.444 * WIDTH, 0.1 * HEIGHT)  # length and width of start button
 
-SELECT_SCREEN_SPACE = (5, 5)  # distance in between each character/stage on the select screen
+SELECT_SCREEN_SPACE = (10, 10)  # distance in between each character/stage on the select screen
 SELECT_TEXT_SIZE = 25
 
 NUM_STAGES = 1
@@ -49,7 +49,7 @@ STAGE_SELECT_WIDTH = STAGE_SELECT_DIMS[0] + SELECT_SCREEN_SPACE[0]
 STAGE_SELECT_LEN = STAGE_SELECT_DIMS[1] + SELECT_SCREEN_SPACE[1]
 STAGE_IMAGE_SPACE = 5
 
-NUM_CHARS = 1
+NUM_CHARS = 2
 CHAR_SELECT_DIMS = (0.13 * WIDTH, 0.26 * HEIGHT)  # length and width of character select buttons
 CHAR_SELECT_WIDTH = CHAR_SELECT_DIMS[0] + SELECT_SCREEN_SPACE[0]
 CHAR_SELECT_LEN = CHAR_SELECT_DIMS[1] + SELECT_SCREEN_SPACE[1]
@@ -108,12 +108,12 @@ class ZeroGravity:
                        pygame.Rect(0, self.h - WALL_WIDTH, self.w, WALL_WIDTH)]]
         self.stage = Stage(self.walls[0], self)
 
-        self.chars = ['Alucard']
+        self.chars = ['Alucard', 'Dr. Robotnik']
         self.charButtons = []
-        start_x = 0.5 * WIDTH - 0.5 * CHAR_SELECT_DIMS[0] - CHAR_SELECT_WIDTH * int(0.5 * NUM_CHARS)
+        start_x = 0.5 * WIDTH - 0.5 * CHAR_SELECT_DIMS[0] - CHAR_SELECT_WIDTH * 0.5 * (NUM_CHARS - 1)
         start_y = 0.5 * HEIGHT - CHAR_SELECT_DIMS[0] * 0.5
         for i in range(NUM_CHARS):
-            xPos = start_x + i * (SELECT_SCREEN_SPACE[0])
+            xPos = start_x + i * (SELECT_SCREEN_SPACE[0] + CHAR_SELECT_DIMS[0])
             rect = pygame.Rect(xPos, start_y, CHAR_SELECT_DIMS[0], CHAR_SELECT_DIMS[1])
 
             char = Char(self.chars[i], self, 1)
@@ -122,10 +122,10 @@ class ZeroGravity:
 
         self.stages = ['Default']
         self.stageButtons = []
-        start_x = 0.5 * WIDTH - 0.5 * STAGE_SELECT_DIMS[0] - STAGE_SELECT_WIDTH * int(0.5 * NUM_CHARS)
+        start_x = 0.5 * WIDTH - 0.5 * STAGE_SELECT_DIMS[0] - STAGE_SELECT_WIDTH * 0.5 * (NUM_STAGES - 1)
         start_y = 0.5 * HEIGHT - STAGE_SELECT_DIMS[0] * 0.5
         for i in range(NUM_STAGES):
-            xPos = start_x + i * (SELECT_SCREEN_SPACE[0])
+            xPos = start_x + i * (SELECT_SCREEN_SPACE[0] + STAGE_SELECT_DIMS[0])
             rect = pygame.Rect(xPos, start_y, STAGE_SELECT_DIMS[0], STAGE_SELECT_DIMS[1])
 
             stage = Stage(self.walls[i], self)
@@ -396,8 +396,9 @@ class ZeroGravity:
                 self.status = 'stage select'
 
         elif self.status == 'stage select':
+            print('click')
             for i in range(NUM_STAGES):
-                if self.charButtons[i].clicked(pos) and button == 1:
+                if self.stageButtons[i].clicked(pos) and button == 1:
                     self.status = 'char select'
                     self.stage = Stage(self.walls[i], self)
 
@@ -406,7 +407,7 @@ class ZeroGravity:
                 if self.charButtons[i].clicked(pos) and button == 1:
                     self.status = 'in game'
                     p1 = Char(self.chars[i], self, 0)
-                    p2 = Char('Alucard', self, 1)
+                    p2 = Char('Dr. Robotnik', self, 1)
                     p1.opponent = p2
                     p2.opponent = p1
                     self.playChars.append(p1)

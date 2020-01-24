@@ -1,92 +1,128 @@
-Speed: 6
-Mass: 0.9
+Speed: 4
+Mass: 1.5
 Health: 10
-Air speed: 3
-Sprites: alucardfinal.png
+Air speed: 2.5
+Sprites: robotnk.png
 Default sprite: xpos ypos xlen ylen hurtbox_xpos hurtbox_ypos hurtbox_xlen hurtbox_ylen
-236 326 114 116
+3 5 72 95
 Wall sprite: xpos ypos xlen ylen hurtbox_xpos hurtbox_ypos hurtbox_xlen hurtbox_ylen
-170 40 120 75
+294 1705 110 60
 
 Neutral A:
 Frame data: Active Inactive End
-10 35 50
+10 26 50
 Damage 3
 Knockback 7
 Angle 0
-Hitboxes: 1 (xpos ypos xlen ylen)
-375 1655 80 15
+Hitboxes: 2 (xpos ypos xlen ylen)
+0 0 0 0
+161 1247 139 33
 Sprites: xpos ypos xlen ylen
-235 1650 190 97
+22 1198 103 106
+163 1193 143 86
 
 Forward A:
 Frame data: Active Inactive End
-5 19 40
+5 21 40
 Damage 2
 Knockback 3
 Angle 315
-Hitboxes: 7 (xpos ypos xlen ylen)
+Hitboxes: 4 (xpos ypos xlen ylen)
 0 0 0 0
 0 0 0 0
-265 3938 13 21
-453 3894 55 24
-147 3989 46 19
-245 3987 37 34
+266 589 33 67
 0 0 0 0
 Sprites: xpos ypos xlen ylen
-191 3739 117 121
-30 3870 140 89
-194 3866 115 102
-314 3867 193 108
-9 3965 185 125
-222 3987 127 154
-380 4007 123 101
+15 579 68 113
+124 584 71 105
+222 592 83 101
+336 588 84 108
 
 Back A:
 Frame data: Active Inactive End
-10 35 50
+5 16 25
 Damage 3
 Knockback 7
-Angle 180
-Hitboxes: 1 (xpos ypos xlen ylen)
-366 660 53 23
+Angle 270
+Hitboxes: 11 (xpos ypos xlen ylen)
+0 0 0 0
+0 0 0 0
+0 0 0 0
+12 1578 27 46
+12 1578 27 46
+12 1578 27 46
+12 1578 27 46
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
 Sprites: xpos ypos xlen ylen
-368 659 178 127
+243 1469 90 91
+353 1465 91 91
+457 1468 110 86
+13 1581 118 96
+13 1581 118 96
+13 1581 118 96
+13 1581 118 96
+163 1583 108 101
+457 1468 110 86
+353 1465 91 91
+243 1469 90 91
 
 Up A:
 Frame data: Active Inactive End
-5 14 25
+5 25 35
 Damage 1
 Knockback 6
-Angle 30
-Hitboxes: 3 (xpos ypos xlen ylen)
-0 0 0 0
-0 0 0 0
-223 2250 70 29
+Angle 120
+Hitboxes: 1 (xpos ypos xlen ylen)
+165 1920 86 90
 Sprites: xpos ypos xlen ylen
-345 2053 109 157
-42 2216 108 130
-157 2235 136 110
+134 1920 114 90
 
 Down A:
 Frame data: Active Inactive End
-10 40 60
-Damage 6
-Knockback 17
-Angle 270
-Hitboxes: 2 (xpos ypos xlen ylen)
+1 85 95
+Damage 3
+Knockback 4
+Angle 0
+Hitboxes: 14 (xpos ypos xlen ylen)
 0 0 0 0
-142 608 15 26
+0 0 0 0
+0 0 0 0
+0 0 0 0
+295 774 29 46
+355 785 27 39
+295 774 29 46
+355 785 27 39
+295 774 29 46
+355 785 27 39
+295 774 29 46
+355 785 27 39
+295 774 29 46
+355 785 27 39
 Sprites: xpos ypos xlen ylen
-197 514 119 103
-47 510 116 125
+13 714 102 84
+13 714 102 84
+13 714 102 84
+13 714 102 84
+253 703 75 113
+351 711 75 111
+253 703 75 113
+351 711 75 111
+253 703 75 113
+351 711 75 111
+253 703 75 113
+351 711 75 111
+253 703 75 113
+351 711 75 111
 
 Down B:
 Frame data: Active Inactive End
 10 49 60
 Damage 5
 Knockback 15
-Angle 300
+Angle 30
 Hitboxes: 39 (xpos ypos xlen ylen)
 0 0 0 0
 0 0 0 0
@@ -173,7 +209,7 @@ Frame data: Active Inactive End
 5 10 40
 Damage 3
 Knockback 5
-Angle 0
+Angle 90
 Hitboxes: 5 (xpos ypos xlen ylen)
 0 0 0 0
 0 0 0 0
@@ -192,7 +228,7 @@ Frame data: Active Inactive End
 5 20 50
 Damage 3
 Knockback 5
-Angle 180
+Angle 270
 Hitboxes: 3 (xpos ypos xlen ylen)
 239 4464 250 500
 0 0 0 0
@@ -207,7 +243,7 @@ Frame data: Active Inactive End
 5 26 50
 Damage 3
 Knockback 5
-Angle 90
+Angle 180
 Hitboxes: 3 (xpos ypos xlen ylen)
 0 0 0 0
 239 4464 250 500
@@ -222,7 +258,7 @@ Frame data: Active Inactive End
 5 20 40
 Damage 3
 Knockback 5
-Angle 270
+Angle 0
 Hitboxes: 3 (xpos ypos xlen ylen)
 239 4464 250 500
 0 0 0 0
@@ -274,11 +310,10 @@ Sprite:
 389 4909 116 42
 
 Jump animation frame data:
-1 16 16
-Sprites: 3
-46 514 119 125
-196 514 123 102
-342 513 130 92
+1 17 17
+Sprites: 2
+9 218 108 121
+133 220 102 96
 
 Death animation sprites: 6
 56 5010 129 109

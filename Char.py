@@ -10,6 +10,7 @@ HITSTUN_CONSTANT = 5
 IMAGE_BUTTON_SPACE = 5
 
 MOVE_OFF_WALL = (15, 25)
+MOVE_OFF_DOWN_WALL = 35
 
 START_COLOR = (60, 100, 140)
 TEXT_COLOR = (0, 0, 0)
@@ -19,7 +20,6 @@ OPPOSITE_BOOST_CONSTANT = 0.8 / 0.5
 
 NUM_SHIELD_POSITIONS = 8
 
-JUMP_FRAME_DATA = [1, 16, 16]
 DEATH_FRAME_DATA = [1, 79, 79]
 
 END_FRAMES = 10
@@ -49,7 +49,7 @@ class Char(pygame.sprite.Sprite):
         self.jumpSpeed = int(self.datasheet.readline()[7:])  # regular movement speed
         self.mass = float(self.datasheet.readline()[6:])
         self.startingHealth = int(self.datasheet.readline()[8:])  # starting health
-        self.driftSpeed = int(self.datasheet.readline()[11:])  # how fast the character drifts
+        self.driftSpeed = float(self.datasheet.readline()[11:])  # how fast the character drifts
 
         self.spriteFile = self.datasheet.readline()[9:].strip()  # get the file with all the sprites
         self.spriteSheet = pygame.image.load(self.spriteFile).convert()
@@ -224,8 +224,10 @@ class Char(pygame.sprite.Sprite):
         self.shieldAnimation = Shield(startPositions, rect, self)
 
         next(self.datasheet)
+        next(self.datasheet)
 
-        numJumpSprites = int(self.datasheet.readline()[24:])
+        frames = self.datasheet.readline().split()
+        numJumpSprites = int(self.datasheet.readline()[9:])
 
         sprites = []
         for k in range(numJumpSprites):
@@ -236,7 +238,7 @@ class Char(pygame.sprite.Sprite):
 
             sprites.append(pygame.Rect(sprite))
 
-        self.jumpAnimation = Jump(JUMP_FRAME_DATA, sprites, None, self.game, self)
+        self.jumpAnimation = Jump(frames, sprites, None, self.game, self)
 
         next(self.datasheet)
         numDeathSprites = int(self.datasheet.readline()[25:])
@@ -463,16 +465,16 @@ class Char(pygame.sprite.Sprite):
                 wall = self.onWall[i]
                 # make sure character is completely on the wall
                 if self.side == 'right':
-                    self.pos = (wall.x + wall.w - 1, self.pos[1])
+                    self.pos = (wall.x + wall.w, self.pos[1])
                     # print('right')
                 elif self.side == 'down':
-                    self.pos = (self.pos[0], wall.y + wall.h - 1)
+                    self.pos = (self.pos[0], wall.y + wall.h)
                     # print('down')
                 elif self.side == 'left':
-                    self.pos = (wall.x - self.dims[0] + 1, self.pos[1])
+                    self.pos = (wall.x - self.dims[0], self.pos[1])
                     # print('left')
                 elif self.side == 'up':
-                    self.pos = (self.pos[0], wall.y - self.dims[1] + 1)
+                    self.pos = (self.pos[0], wall.y - self.dims[1])
                     # print('up')
 
             # for wall in self.onWall:
@@ -496,7 +498,7 @@ class Char(pygame.sprite.Sprite):
                 if side == 'right':
                     self.move(MOVE_OFF_WALL[0], 0)
                 if side == 'up':
-                    self.move(0, -1 * MOVE_OFF_WALL[1])
+                    self.move(0, -1 * MOVE_OFF_DOWN_WALL)
                 if side == 'down':
                     self.move(0, MOVE_OFF_WALL[1])
 
@@ -696,10 +698,14 @@ class ImageButton:
         self.rect = rect
         self.text = text
         self.textSize = textSize
+        if self.text == 'Default':
+            print('Button rect: ' + str(self.rect))
+            print(IMAGE_BUTTON_SPACE)
 
     def draw(self):
         pygame.draw.rect(self.game.screen, (0, 0, 0), self.rect, 2)
         self.game.screen.blit(self.image, (self.rect[0] + IMAGE_BUTTON_SPACE, self.rect[1] + IMAGE_BUTTON_SPACE))
+
         xPos = self.rect.x
         yPos = self.rect.y + self.image.get_height()
         length = self.rect.width
@@ -707,4 +713,10 @@ class ImageButton:
         self.game.displayText(self.text, self.textSize, pygame.Rect(xPos, yPos, length, height), TEXT_COLOR)
 
     def clicked(self, pos):
+        if self.text == 'Default':
+            if self.rect.collidepoint(pos):
+                print('click in range')
+            else:
+                print('Position: ' + str(pos))
+                print('Rect: ' + str(self.rect))
         return self.rect.collidepoint(pos)
