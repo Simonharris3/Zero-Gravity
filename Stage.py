@@ -7,6 +7,8 @@ class Stage:
         self.walls = walls
         self.leftWall = self.walls[0]
         self.rightWall = self.walls[2]
+        self.bottomWall = self.walls[3]
+        self.topWall = self.walls[1]
         self.game = game
         self.p1start = (self.game.wallWidth - 1, self.game.h / 2)
         self.p2start = (self.game.w - self.game.wallWidth, self.game.h / 2)

@@ -7,6 +7,7 @@ import traceback
 SHIELD_MULTIPLE = 45
 SHIELD_KNOCKBACK = 3
 
+THROW_RECOIL = -0.5
 
 class Animation:
     def __init__(self, frameData, sprites, specialFile, game, char):
@@ -135,16 +136,16 @@ class Attack(Animation):
 
 
 class Throw(Attack):
-    def __init__(self, frames, damage, knockback, angle, hitboxes, sprites, game, char):
-        super().__init__(frames, damage, knockback, angle, hitboxes, sprites, game, char)
+    def __init__(self, frames, damage, knockback, angle, sprites, game, char):
+        super().__init__(frames, damage, knockback, angle, [], sprites, game, char)
 
     def act(self):
         self.char.currSprite = self.sprites[self.spriteIndex]
 
         if self.active:
             self.char.opponent.hit(ThrowHitbox(self.damage, self.knockback, self.angle, self))
-            self.char.xVelocity = -1 * self.char.opponent.xVelocity
-            self.char.yVelocity = -1 * self.char.opponent.yVelocity
+            self.char.xVelocity = THROW_RECOIL * self.char.opponent.xVelocity
+            self.char.yVelocity = THROW_RECOIL * self.char.opponent.yVelocity
             self.deactivate()
 
 

@@ -1,10 +1,9 @@
-# TODO LIST:
-#          Add new characters
-
-# TODO FUTURE:
+# TODO List:
+#          Make it look pretty
+#          Stop sprite changes when move not active
+#          "Active frame" for throws
 #          Fix wall collision by keeping track of a character that had recently left a wall
 #          Allow tethers to be angled and to snap to the wall
-#          Fix throw bug: what if a character hits a wall before the throw is over?
 #          Allow characters to move out of corners more easily
 #          Allow characters to change direction at will
 #          Landing lag
@@ -13,7 +12,12 @@
 #          Comment
 #          Handle character collision
 #          Add new stages
+#          Add new characters
 #          Re-implement keyboard movement
+
+# TODO: bugs
+#           If a character hits a wall before the throw is over, the throw doesn't happen
+#           If robotnik dies on the bottom wall, the final sprite doesn't show up
 
 import time
 import pygame.key
@@ -407,7 +411,7 @@ class ZeroGravity:
                 if self.charButtons[i].clicked(pos) and button == 1:
                     self.status = 'in game'
                     p1 = Char(self.chars[i], self, 0)
-                    p2 = Char('Dr. Robotnik', self, 1)
+                    p2 = Char('Alucard', self, 1)
                     p1.opponent = p2
                     p2.opponent = p1
                     self.playChars.append(p1)
@@ -426,16 +430,21 @@ class ZeroGravity:
     def detectCollisions(self):  # see if a character has collided with a wall (other character)
         if self.status == 'in game':
             for char in self.playChars:  # for every character playing,
-                # TODO: use mask to check if char collides with wall
-                collided = char.rect.collidelist(self.stage.walls)
+                # TODO: change this
+                wallIndex = -1
+
+                for i in range(len(self.stage.walls)):
+                    if char.rect.colliderect(self.stage.walls[i]):
+                        wallIndex = i
+
                 # if char == self.playChars[0] and collided == 2:
                 #     print('collided with right wall')
-                sides = self.stage.wallSide(char, index=collided)
-                if collided != -1:
+                sides = self.stage.wallSide(char, index=wallIndex)
+                if wallIndex != -1:
                     # if char == self.playChars[0]:
                     #     print('Collided: ' + str(collided))
                     #     print('Rect: ' + str(char.rect))
-                    if char.onWall != self.stage.walls[collided]:
+                    if char.onWall != self.stage.walls[wallIndex]:
                         # if that character collides with a wall (and is not already on the wall),
                         # if the character is not moving away from the wall
                         # (this prevents characters 'colliding' with the wall as they jump off it)
@@ -444,9 +453,7 @@ class ZeroGravity:
                             # if char == self.playChars[0] and collided == 2:
                             #     print('hit right wall')
 
-                            char.xVelocity = 0
-                            char.yVelocity = 0  # the character stops moving
-                            char.hitWall(self.stage.walls[collided])
+                            char.hitWall(self.stage.walls[wallIndex])
                             # if char == self.playChars[0]:
                             #   print('x: %d, y:%d' % (char.pos[0], char.pos[1]))
 

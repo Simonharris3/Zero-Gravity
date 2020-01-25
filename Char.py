@@ -20,8 +20,6 @@ OPPOSITE_BOOST_CONSTANT = 0.8 / 0.5
 
 NUM_SHIELD_POSITIONS = 8
 
-DEATH_FRAME_DATA = [1, 79, 79]
-
 END_FRAMES = 10
 
 class Char(pygame.sprite.Sprite):
@@ -137,25 +135,14 @@ class Char(pygame.sprite.Sprite):
                 next(self.datasheet)
 
             frames = self.datasheet.readline().split()
+            print(frames)
             damage = int(self.datasheet.readline()[7:])
             knockback = int(self.datasheet.readline()[10:])
             angle = int(self.datasheet.readline()[5:])
-            numHitboxes = int(self.datasheet.readline()[10:12])
-
-            hitboxes = []
-            for k in range(numHitboxes):
-                data = self.datasheet.readline().split()
-                hitbox = []
-
-                for datum in data:
-                    hitbox.append(int(datum))
-
-                hitboxes.append(pygame.Rect(hitbox))
-
-            next(self.datasheet)
+            numSprites = int(self.datasheet.readline()[9:11])
 
             sprites = []
-            for k in range(numHitboxes):
+            for k in range(numSprites):
                 data = self.datasheet.readline().split()
                 sprite = []
                 for datum in data:
@@ -166,7 +153,7 @@ class Char(pygame.sprite.Sprite):
             # print('%s sprite file: %s' % (moveNames[i], spriteFile))
             # create a move object with all the data read from the file
             self.moves[throwNames[i]] = \
-                Throw(frames, damage, knockback, angle, hitboxes, sprites, self.game, self)
+                Throw(frames, damage, knockback, angle, sprites, self.game, self)
 
         for i in range(3):
             next(self.datasheet)
@@ -241,7 +228,10 @@ class Char(pygame.sprite.Sprite):
         self.jumpAnimation = Jump(frames, sprites, None, self.game, self)
 
         next(self.datasheet)
-        numDeathSprites = int(self.datasheet.readline()[25:])
+        next(self.datasheet)
+
+        frames = self.datasheet.readline().split()
+        numDeathSprites = int(self.datasheet.readline()[9:])
 
         sprites = []
         for k in range(numDeathSprites):
@@ -252,7 +242,7 @@ class Char(pygame.sprite.Sprite):
 
             sprites.append(pygame.Rect(sprite))
 
-        self.deathAnimation = Death(DEATH_FRAME_DATA, sprites, None, self.game, self)
+        self.deathAnimation = Death(frames, sprites, None, self.game, self)
 
         next(self.datasheet)
 
@@ -345,7 +335,7 @@ class Char(pygame.sprite.Sprite):
             # pygame.draw.rect(self.screen, pygame.Color('Red'), hitbox.rect)
 
             outline = effectBox.mask.outline()
-            print('Outline exists: ' + str(len(outline) > 0))
+            # print('Outline exists: ' + str(len(outline) > 0))
             for point in outline:
                 pygame.draw.circle(self.screen, pygame.Color('Red'),
                                    (point[0] + effectBox.rect.x, point[1] + effectBox.rect.y), 0)
@@ -440,10 +430,18 @@ class Char(pygame.sprite.Sprite):
     def hitWall(self, wall):
         if wall not in self.onWall and not self.frozen:
             if self.health <= 0:
-                self.currSprite = self.finalSprite
-                self.fallingToDeath = False
-                self.endTimer = 0
+                print('hit wall with 0 health')
+                print(self.onWall)
+                if wall == self.stage.bottomWall:
+                    print('bottom wall hit')
+                    self.currSprite = self.finalSprite
+                    self.fallingToDeath = False
+                    self.endTimer = 0
+                else:
+                    return
 
+            self.xVelocity = 0
+            self.yVelocity = 0  # the character stops moving
             # print('hit wall')
             self.canAct = True
 
