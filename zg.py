@@ -1,23 +1,35 @@
 # TODO List:
-#          Make it look pretty
-#          Stop sprite changes when move not active
+#          Default sprite when move becomes inactive
 #          "Active frame" for throws
-#          Fix wall collision by keeping track of a character that had recently left a wall
-#          Allow tethers to be angled and to snap to the wall
-#          Allow characters to move out of corners more easily
 #          Allow characters to change direction at will
 #          Landing lag
 #          When a character in hitstun hits a wall, make it bounce off
-#          Character stunned when tether collides with an attack
+#          Character get stunned when their tether collides with an attack
 #          Comment
-#          Handle character collision
-#          Add new stages
-#          Add new characters
 #          Re-implement keyboard movement
+#          Limit boost freeze time
+#          Allow any port for controller
+#          Detect when a character is not in the stage walls
+
+# TODO future:
+#       Wall attack
+#       Allow tethers to be angled and to snap to the wall
+#       Prevent attacks while frozen from boost
+#       Allow walking on walls
+#       Relax jumping constraints
+#       Select stage + character with controller
+#       Make characters bigger?
+#       Make it look prettier, including images
+#       Add new characters
+
+# TODO stretch:
+#       Handle character collision
+#       Add new stages
 
 # TODO: bugs
-#           If a character hits a wall before the throw is over, the throw doesn't happen
-#           If robotnik dies on the bottom wall, the final sprite doesn't show up
+#       If a character hits a wall before the throw is over, the throw doesn't happen
+#       If robotnik dies on the bottom wall, the final sprite doesn't show up
+#       Characters can slip through or slide along the wall if they are near the corner
 
 import time
 import pygame.key
@@ -27,8 +39,8 @@ import gc
 from Char import *
 from Stage import Stage
 
-WIDTH = 1000  # screen width
-HEIGHT = 500  # screen height
+WIDTH = 1280
+HEIGHT = 800
 WINDOW_OFFSET_X = 5
 WINDOW_OFFSET_Y = 30  # no idea why but this works
 START_COLOR = (60, 100, 140)  # start screen color
@@ -37,28 +49,30 @@ GAME_COLOR = (50, 100, 150)  # game screen color -- possible to make this stage-
 FPS = 60  # 60 frames per second
 
 START_TEXT = 'ZERO GRAVITY'  # text on the start screen
-START_TEXT_POS = (WIDTH / 2 - 300, 2.0 / 7 * HEIGHT)  # top left corner of start text
-START_TEXT_SIZE = 100  # start screen text will be this big
+START_TEXT_POS = (WIDTH / 2 - 300, .371 * HEIGHT)  # top left corner of start text
+START_TEXT_SIZE = 120  # start screen text will be this big
 START_TEXT_RECT_DIMS = (600, 100)  # somewhat arbitrary
-BUTTON_TEXT_SIZE = 60  # text on the button will be this big
+BUTTON_TEXT_SIZE = 50  # text on the button will be this big
 BUTTON_CORNER = (0.278 * WIDTH, 0.614 * HEIGHT)  # top left corner of start button
 BUTTON_DIMS = (0.444 * WIDTH, 0.1 * HEIGHT)  # length and width of start button
 
 SELECT_SCREEN_SPACE = (10, 10)  # distance in between each character/stage on the select screen
-SELECT_TEXT_SIZE = 25
+SELECT_TEXT_SIZE = 18
 
 NUM_STAGES = 1
-STAGE_SELECT_DIMS = (int(0.2 * WIDTH), int(0.26 * HEIGHT))  # length and width of stage select buttons
+STAGE_SELECT_DIMS = (int(0.2 * WIDTH), int(0.25 * HEIGHT))  # length and width of stage select buttons
 STAGE_SELECT_WIDTH = STAGE_SELECT_DIMS[0] + SELECT_SCREEN_SPACE[0]
 STAGE_SELECT_LEN = STAGE_SELECT_DIMS[1] + SELECT_SCREEN_SPACE[1]
 STAGE_IMAGE_SPACE = 5
+STAGE_IMAGE_BUFFER = 33
 
 NUM_CHARS = 2
-CHAR_SELECT_DIMS = (0.13 * WIDTH, 0.26 * HEIGHT)  # length and width of character select buttons
+CHAR_SELECT_DIMS = (0.17 * WIDTH, 0.30 * HEIGHT)  # length and width of character select buttons
 CHAR_SELECT_WIDTH = CHAR_SELECT_DIMS[0] + SELECT_SCREEN_SPACE[0]
 CHAR_SELECT_LEN = CHAR_SELECT_DIMS[1] + SELECT_SCREEN_SPACE[1]
+CHAR_IMAGE_SCALE = 1.7
 
-WALL_WIDTH = 40  # how wide the wall is
+WALL_WIDTH = 20  # how wide the wall is
 
 X_BUTTON = 0
 A_BUTTON = 1
@@ -78,20 +92,21 @@ DEAD_ZONE = 0.3
 DIAG_DEAD_ZONE = 0.15
 SINGLE_DIRECTION_BUFFER = 0.2
 
+
 class ZeroGravity:
     def __init__(self):
+        pygame.init()
         self.w = WIDTH
         self.h = HEIGHT
 
-        # there was a variable here called self.def, I'm not sure what it was
-
-        pygame.init()  # start pygame
-
         # screen is in top left corner
         os.environ['SDL_VIDEO_WINDOW_POS'] = '%i,%i' % (WINDOW_OFFSET_X, WINDOW_OFFSET_Y)
-        self.screen = pygame.display.set_mode((self.w, self.h))  # create the screen
+        self.screen = pygame.display.set_mode((self.w, self.h), pygame.FULLSCREEN)  # create the screen
         # self.screen.fill(START_COLOR)  # fill the screen with white
         pygame.display.flip()  # open the screen
+
+        self.background = pygame.image.load('imgs/background.jpg')
+        self.background = pygame.transform.scale(self.background, (self.w, self.h))
 
         self.chars = []  # list of playable characters
         self.status = 'start screen'  # whether the game is at the start screen, character select screen, or in a game
@@ -112,7 +127,7 @@ class ZeroGravity:
                        pygame.Rect(0, self.h - WALL_WIDTH, self.w, WALL_WIDTH)]]
         self.stage = Stage(self.walls[0], self)
 
-        self.chars = ['Alucard', 'Dr. Robotnik']
+        self.chars = ['ALUCARD', 'DR ROBOTNIK']
         self.charButtons = []
         start_x = 0.5 * WIDTH - 0.5 * CHAR_SELECT_DIMS[0] - CHAR_SELECT_WIDTH * 0.5 * (NUM_CHARS - 1)
         start_y = 0.5 * HEIGHT - CHAR_SELECT_DIMS[0] * 0.5
@@ -122,9 +137,11 @@ class ZeroGravity:
 
             char = Char(self.chars[i], self, 1)
             charImage = char.spriteSheet.subsurface(char.defaultSprite).copy()
+            charImage = pygame.transform.scale(charImage, (int(charImage.get_width() * CHAR_IMAGE_SCALE),
+                                                           int(charImage.get_height() * CHAR_IMAGE_SCALE)))
             self.charButtons.append(ImageButton(charImage, rect, self.chars[i], SELECT_TEXT_SIZE, self))
 
-        self.stages = ['Default']
+        self.stages = ['DEFAULT']
         self.stageButtons = []
         start_x = 0.5 * WIDTH - 0.5 * STAGE_SELECT_DIMS[0] - STAGE_SELECT_WIDTH * 0.5 * (NUM_STAGES - 1)
         start_y = 0.5 * HEIGHT - STAGE_SELECT_DIMS[0] * 0.5
@@ -134,7 +151,7 @@ class ZeroGravity:
 
             stage = Stage(self.walls[i], self)
             stageImage = stage.image(STAGE_SELECT_DIMS[0] - 2 * STAGE_IMAGE_SPACE,
-                                     STAGE_SELECT_DIMS[1] - 2 * STAGE_IMAGE_SPACE - 16)
+                                     STAGE_SELECT_DIMS[1] - 2 * STAGE_IMAGE_SPACE - STAGE_IMAGE_BUFFER)
             self.stageButtons.append(ImageButton(stageImage, rect, self.stages[i], SELECT_TEXT_SIZE, self))
 
         # self.walls.append(pygame.Rect(LEFT_PLAT))
@@ -189,6 +206,7 @@ class ZeroGravity:
                 button.draw()
         elif self.status == 'in game':
             self.screen.fill(GAME_COLOR)
+            self.screen.blit(self.background, (0, 0))
             for char in self.playChars:
                 char.draw()
             self.stage.draw()
@@ -198,7 +216,7 @@ class ZeroGravity:
             if event.type == pygame.QUIT:  # when you click x, exit the program
                 self.running = False
             elif event.type == pygame.KEYDOWN:
-                print('key pressed')
+                # print('key pressed')
                 self.keyDown(pygame.key.get_pressed())  # if a key was pressed, do the associated action
             # elif event.type == pygame.KEYUP:
             #   self.keyUp(pygame.key.get_pressed())  # if a key was released, do the associated action
@@ -411,7 +429,7 @@ class ZeroGravity:
                 if self.charButtons[i].clicked(pos) and button == 1:
                     self.status = 'in game'
                     p1 = Char(self.chars[i], self, 0)
-                    p2 = Char('Alucard', self, 1)
+                    p2 = Char('ALUCARD', self, 1)
                     p1.opponent = p2
                     p2.opponent = p1
                     self.playChars.append(p1)
@@ -427,35 +445,31 @@ class ZeroGravity:
 
         self.detectCollisions()  # see if characters have collided with objects, walls, hitboxes, or other characters
 
-    def detectCollisions(self):  # see if a character has collided with a wall (other character)
+    def detectCollisions(self):  # see if a character has collided with a wall, effect box, or other character
         if self.status == 'in game':
             for char in self.playChars:  # for every character playing,
                 # TODO: change this
-                wallIndex = -1
+                walls = []
 
-                for i in range(len(self.stage.walls)):
-                    if char.rect.colliderect(self.stage.walls[i]):
-                        wallIndex = i
+                for wall in self.stage.walls:
+                    if char.collidesWith(wall):
+                        walls.append(wall)
 
                 # if char == self.playChars[0] and collided == 2:
                 #     print('collided with right wall')
-                sides = self.stage.wallSide(char, index=wallIndex)
-                if wallIndex != -1:
+                for wall in walls:
                     # if char == self.playChars[0]:
                     #     print('Collided: ' + str(collided))
                     #     print('Rect: ' + str(char.rect))
-                    if char.onWall != self.stage.walls[wallIndex]:
+                    if wall not in char.onWall and wall not in char.leavingWall and not isinstance(char.currMove, Jump):
                         # if that character collides with a wall (and is not already on the wall),
                         # if the character is not moving away from the wall
                         # (this prevents characters 'colliding' with the wall as they jump off it)
-                        if (('right' in sides and char.xVelocity <= 0) or ('down' in sides and char.yVelocity <= 0) or
-                                ('left' in sides and char.xVelocity >= 0) or ('up' in sides and char.yVelocity >= 0)):
-                            # if char == self.playChars[0] and collided == 2:
-                            #     print('hit right wall')
-
-                            char.hitWall(self.stage.walls[wallIndex])
-                            # if char == self.playChars[0]:
-                            #   print('x: %d, y:%d' % (char.pos[0], char.pos[1]))
+                        # if (('right' in sides and char.xVelocity <= 0) or ('down' in sides and char.yVelocity <= 0) or
+                        #         ('left' in sides and char.xVelocity >= 0) or ('up' in sides and char.yVelocity >= 0)):
+                        char.hitWall(wall)
+                        # if char == self.playChars[0]:
+                        #   print('x: %d, y:%d' % (char.pos[0], char.pos[1]))
 
                 for c2 in self.playChars:
                     if c2 != char:
@@ -476,14 +490,14 @@ class ZeroGravity:
 
     # show text on the screen
     def displayText(self, message, textSize, rect, textColor=(0, 0, 0)):
-        # TODO: change font
-        font = pygame.font.Font(None, textSize)
-        text = font.render(message, 1, textColor)
+        font = pygame.font.Font('Fonts/Elianto-Regular.ttf', textSize)
+        text = font.render(message, False, textColor)
         textpos = text.get_rect()
         textpos.centerx = rect.centerx
         textpos.centery = rect.centery
         # pygame.draw.rect(self.screen, bkgColor, textpos)
         self.screen.blit(text, textpos)
+
 
 def shieldCollision(c1: Char, c2: Char):
     for box in c1.effectBoxes:
@@ -492,6 +506,7 @@ def shieldCollision(c1: Char, c2: Char):
                 if isinstance(box2, Hitbox) and pygame.sprite.collide_mask(box, box2):
                     box.hit(box2)
 
+
 def boxCollision(c1: Char, c2: Char):
     for box in c1.effectBoxes:
         if not isinstance(box, ShieldBox):
@@ -499,6 +514,7 @@ def boxCollision(c1: Char, c2: Char):
                 box.hit(c2)  # the character gets hit
                 if c1.currMove is not None:
                     c1.currMove.deactivate()  # deactivate the hitbox so it doesn't keep hitting
+
 
 # given a set of joystick inputs, return the angle that corresponds to those inputs
 def joystickAngle(xAxis, yAxis):

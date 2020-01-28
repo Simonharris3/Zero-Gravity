@@ -9,6 +9,8 @@ SHIELD_KNOCKBACK = 3
 
 THROW_RECOIL = -0.5
 
+DEATH_SPEED = 3
+
 class Animation:
     def __init__(self, frameData, sprites, specialFile, game, char):
         self.activeframe = int(frameData[0])  # when the hitbox comes out
@@ -28,7 +30,7 @@ class Animation:
                 self.spriteFile = char.shieldFile
         else:
             self.spriteFile = char.spriteFile
-        self.spriteSheet = pygame.image.load(self.spriteFile).convert()
+        self.spriteSheet = pygame.image.load('imgs/' + self.spriteFile).convert()
         self.spriteSheet.set_colorkey((255, 0, 255))
 
         self.active = False
@@ -43,8 +45,8 @@ class Animation:
 
         self.frameWait = int(self.frameWait)
 
-        if self.sprites[0] == pygame.Rect(46, 514, 119, 125):
-            print('active frame: %d, inactive frame: %d, frame wait: %d' % (self.activeframe, self.inactiveframe, self.frameWait))
+        # if self.sprites[0] == pygame.Rect(46, 514, 119, 125):
+        #     print('active frame: %d, inactive frame: %d, frame wait: %d' % (self.activeframe, self.inactiveframe, self.frameWait))
 
         self.paused = False
 
@@ -98,8 +100,9 @@ class Animation:
         self.paused = False
 
     def deactivate(self):
-        # print('deactivating')
+        print('deactivating')
         self.active = False
+        self.char.currSprite = self.char.defaultSprite
 
     def act(self):
         self.char.currSprite = self.sprites[self.spriteIndex]
@@ -202,13 +205,14 @@ class Death(Animation):
     def end(self):
         super().end()
         self.char.fallingToDeath = True
-        self.char.yVelocity = 3
+        self.char.yVelocity = DEATH_SPEED
 
     def start(self):
         super().start()
         self.char.xVelocity = 0
         self.char.yVelocity = 0
         self.char.moveOffWall()
+
 
 class Jump(Animation):
     def __init__(self, frameData, sprites, specialFile, game, char):

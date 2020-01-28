@@ -1,6 +1,9 @@
 import pygame
+import sys
 
 WALL_COLOR = (0, 0, 0)
+
+CHECK_WALL_DISTANCE = 30
 
 class Stage:
     def __init__(self, walls, game):
@@ -15,9 +18,13 @@ class Stage:
 
     def checkWalls(self, angle, walls, char):
         # check if a character that is on the given walls can jump off at the given angle
-        # when different stages are added, this will become a stage method
 
-        # pass in position of the character. use that to determine which side of a middle wall the character is on (in another method)
+        for wall in self.walls:
+            # print('Wall: ' + str(wall))
+            # print('Distance: ' + str(distance(char.rect, wall)))
+            if distance(char.rect, wall) < CHECK_WALL_DISTANCE:
+                walls.append(wall)
+
         left = False
         up = False
         right = False
@@ -38,6 +45,8 @@ class Stage:
             if down:
                 return 270 < angle < 360
             elif up:
+                # print('right and up')
+                # print('angle: ' + str(angle))
                 return 0 < angle < 90
             else:
                 return 270 < angle < 360 or 0 <= angle < 90
@@ -120,7 +129,8 @@ class Stage:
 
     def image(self, width, height):
         img = pygame.Surface((width, height))
-        img.fill(pygame.Color('White'))
+        bkg = pygame.transform.scale(self.game.background, (width, height))
+        img.blit(bkg, (0, 0))
 
         for wall in self.walls:
             print('Wall: ' + str(wall))
@@ -129,6 +139,33 @@ class Stage:
             miniWidth = wall.width / self.game.w * width
             miniHeight = wall.height / self.game.h * height
             miniWall = pygame.Rect(xPos, yPos, miniWidth, miniHeight)
-            img.fill(pygame.Color('Grey'), miniWall)
+            img.fill(pygame.Color('Black'), miniWall)
 
         return img
+
+    # whether a character is outside the stage walls
+    def isOutside(self, char):
+        pass
+
+def distance(rect1, rect2):
+    right1 = rect1.x + rect1.w
+    right2 = rect2.x + rect2.w
+    bottom1 = rect1.y + rect1.h
+    bottom2 = rect2.y + rect2.h
+
+    xDist = sys.maxsize
+    yDist = sys.maxsize
+
+    if right1 < rect2.x:
+        xDist = rect2.x - right1
+
+    if right2 < rect1.x:
+        xDist = rect1.x - right2
+
+    if bottom1 < rect2.y:
+        yDist = rect2.y - bottom1
+
+    if bottom2 < rect1.y:
+        yDist = rect1.y - bottom2
+
+    return min(xDist, yDist)
