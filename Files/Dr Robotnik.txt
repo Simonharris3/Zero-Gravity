@@ -1,0 +1,301 @@
+Speed: 4
+Mass: 1.5
+Health: 10
+Air speed: 2.5
+Sprites: robotnk.png
+Default sprite: xpos ypos xlen ylen hurtbox_xpos hurtbox_ypos hurtbox_xlen hurtbox_ylen
+3 5 72 95
+Wall sprite: xpos ypos xlen ylen hurtbox_xpos hurtbox_ypos hurtbox_xlen hurtbox_ylen
+294 1705 110 60
+
+Neutral A:
+Frame data: Active Inactive End
+10 26 50
+Damage 3
+Knockback 7
+Angle 0
+Hitboxes: 2 (xpos ypos xlen ylen)
+0 0 0 0
+161 1247 139 33
+Sprites: xpos ypos xlen ylen
+22 1198 103 106
+163 1193 143 86
+
+Forward A:
+Frame data: Active Inactive End
+5 21 40
+Damage 2
+Knockback 3
+Angle 315
+Hitboxes: 4 (xpos ypos xlen ylen)
+0 0 0 0
+0 0 0 0
+266 589 33 67
+0 0 0 0
+Sprites: xpos ypos xlen ylen
+15 579 68 113
+124 584 71 105
+222 592 83 101
+336 588 84 108
+
+Back A:
+Frame data: Active Inactive End
+5 11 25
+Damage 3
+Knockback 7
+Angle 270
+Hitboxes: 6 (xpos ypos xlen ylen)
+0 0 0 0
+0 0 0 0
+0 0 0 0
+12 1578 27 46
+12 1578 27 46
+0 0 0 0
+Sprites: xpos ypos xlen ylen
+243 1469 90 91
+353 1465 91 91
+457 1468 110 86
+13 1581 118 96
+13 1581 118 96
+163 1583 108 101
+
+Up A:
+Frame data: Active Inactive End
+5 25 35
+Damage 1
+Knockback 6
+Angle 120
+Hitboxes: 1 (xpos ypos xlen ylen)
+165 1920 86 90
+Sprites: xpos ypos xlen ylen
+134 1920 114 90
+
+Down A:
+Frame data: Active Inactive End
+1 85 95
+Damage 3
+Knockback 4
+Angle 0
+Hitboxes: 14 (xpos ypos xlen ylen)
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+295 774 29 46
+355 785 27 39
+295 774 29 46
+355 785 27 39
+295 774 29 46
+355 785 27 39
+295 774 29 46
+355 785 27 39
+295 774 29 46
+355 785 27 39
+Sprites: xpos ypos xlen ylen
+13 714 102 84
+13 714 102 84
+13 714 102 84
+13 714 102 84
+253 703 75 113
+351 711 75 111
+253 703 75 113
+351 711 75 111
+253 703 75 113
+351 711 75 111
+253 703 75 113
+351 711 75 111
+253 703 75 113
+351 711 75 111
+
+Down B:
+Frame data: Active Inactive End
+10 49 60
+Damage 5
+Knockback 15
+Angle 30
+Hitboxes: 39 (xpos ypos xlen ylen)
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+354 4591 84 98
+69 4694 58 138
+203 4697 87 157
+358 4704 104 152
+70 4865 110 128
+233 4889 120 98
+393 4911 112 38
+Sprites: xpos ypos xlen ylen
+359 4446 137 125
+359 4446 137 125
+359 4446 137 125
+32 4557 115 138
+32 4557 115 138
+32 4557 115 138
+32 4557 115 138
+32 4557 115 138
+32 4557 115 138
+32 4557 115 138
+32 4557 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+0 0 115 138
+354 4591 84 98
+69 4694 58 138
+203 4697 87 157
+358 4704 104 152
+70 4865 110 128
+233 4889 120 98
+393 4846 112 104
+
+Forward throw:
+Frame data: Active Inactive End
+5 21 40
+Damage 3
+Knockback 6
+Angle 0
+Sprites: 4 (xpos ypos xlen ylen)
+352 845 94 95
+459 839 94 97
+11 952 106 97
+127 960 123 92
+
+Back throw:
+Frame data: Active Inactive End
+5 21 50
+Damage 3
+Knockback 6
+Angle 180
+Sprites: 8 (xpos ypos xlen ylen)
+243 1469 90 91
+353 1465 91 91
+457 1468 110 86
+13 1581 118 96
+163 1583 108 101
+163 1583 108 101
+163 1583 108 101
+163 1583 108 101
+
+Up throw:
+Frame data: Active Inactive End
+5 26 35
+Damage 3
+Knockback 6
+Angle 90
+Sprites: 1 (xpos ypos xlen ylen)
+277 1325 96 127
+
+Down throw:
+Frame data: Active Inactive End
+5 14 30
+Damage 3
+Knockback 6
+Angle 270
+Sprites: 3 (xpos ypos xlen ylen)
+408 1929 90 118
+14 2042 123 111
+157 2042 95 113
+
+Tether:
+Frame data:
+5 25 40
+Start position:
+115 13
+Grab boxes: 10
+0 0 0 0
+239 4464 36 20
+239 4464 72 20
+239 4464 108 20
+239 4464 144 20
+239 4464 180 20
+239 4464 180 20
+239 4464 180 20
+239 4464 180 20
+239 4464 180 20
+Sprites: (Character)
+125 962 126 90
+125 962 126 90
+125 962 126 90
+125 962 126 90
+125 962 126 90
+125 962 126 90
+125 962 126 90
+125 962 126 90
+125 962 126 90
+125 962 126 90
+
+Shield:
+Start positions:
+105 -10
+70 -30
+0 -30
+-30 -40
+-30 -10
+-50 50
+0 100
+60 60
+Sprite:
+389 4909 116 42
+
+Jump animation frame data:
+1 17 17
+Sprites: 2
+9 218 108 121
+133 220 102 96
+
+Death animation frame data:
+1 81 81
+Sprites: 5
+20 2186 95 93
+138 2186 112 87
+281 2183 73 83
+25 2299 106 117
+161 2302 131 85
+Final sprite:
+325 2311 135 60
