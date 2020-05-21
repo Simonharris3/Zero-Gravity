@@ -246,7 +246,7 @@ Tether:
 Frame data:
 5 25 40
 Start position:
-115 13
+116 0
 Grab boxes: 10
 0 0 0 0
 239 4464 36 20

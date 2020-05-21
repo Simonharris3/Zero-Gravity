@@ -312,8 +312,10 @@ class GrabBox(EffectBox):
         else:
             xOffset = self.char.dims[0] - startPos[0] - self.rect.width
 
-        self.rect = self.rect.move((self.char.pos[0] + xOffset - self.rect.x,
-                                    self.char.pos[1] + startPos[1] - self.rect.y))
+        print('startpos[1]: ' + str(startPos[1]))
+
+        self.rect = self.rect.move(self.char.pos[0] + xOffset - self.rect.x,
+                                   self.char.pos[1] + startPos[1] - self.rect.y)
 
     # both characters are stopped in place, self.char gets to throw opposing char
     def hit(self, char):

@@ -4,7 +4,7 @@ import pygame
 
 # HEALTH_BAR_OFFSET = 10  # could be used but display is fine without it
 HEALTH_BAR_WIDTH = 5
-HEALTH_BAR_COLOR = (30, 60, 140)
+HEALTH_BAR_COLOR = (200, 200, 250)
 
 HITSTUN_CONSTANT = 5
 
@@ -39,10 +39,13 @@ class Char(pygame.sprite.Sprite):
 
         self.canAct = True  # whether the character is in move lag or hitstun
         self.frozen = False  # if a character is frozen, it cannot drift or jump
-
         self.unfreezing = False  # so that the character doesn't immediately freeze after unfreezing
+
         self.shielding = False
         self.shieldAngle = 0  # angle of the shield relative to the character
+
+        self.boostCount = 2
+        self.freezeTimer = -1
 
         self.leavingWall = []
         self.leavingCounter = -1
@@ -341,14 +344,15 @@ class Char(pygame.sprite.Sprite):
             effectBox.draw()
             # pygame.draw.rect(self.screen, pygame.Color('Red'), hitbox.rect)
 
-            outline = effectBox.mask.outline()
-            # print('Outline exists: ' + str(len(outline) > 0))
-            for point in outline:
-                pygame.draw.circle(self.screen, pygame.Color('Red'),
-                                   (point[0] + effectBox.rect.x, point[1] + effectBox.rect.y), 0)
+            # outline = effectBox.mask.outline()
+            # # print('Outline exists: ' + str(len(outline) > 0))
+            # for point in outline:
+            #     pygame.draw.circle(self.screen, pygame.Color('Red'),
+            #                        (point[0] + effectBox.rect.x, point[1] + effectBox.rect.y), 0)
 
     def update(self):  # operations that must be done every frame
         self.updateDeath()
+        self.updateBoost()
         self.updateOrientation()
         if not self.frozen:
             self.move(self.xVelocity, self.yVelocity)
@@ -357,6 +361,15 @@ class Char(pygame.sprite.Sprite):
         self.updateHurtbox()
         self.updateMoves()
         self.updateLeavingWall()
+
+    def updateBoost(self):
+        if self.freezeTimer > -1:
+            self.freezeTimer -= 1
+
+        if self.freezeTimer == 0:
+            print('time up: unfreeze')
+            self.unfreeze()
+            self.freezeTimer = -1
 
     def updateLeavingWall(self):
         if self.leavingCounter > -1:
@@ -447,15 +460,15 @@ class Char(pygame.sprite.Sprite):
         self.image = self.spriteSheet.subsurface(self.currSprite).copy()
 
     def hitWall(self, wall):
-        if wall == self.stage.bottomWall:
-            print('collided with bottom wall')
-            print('already on bottom wall: ' + str(wall in self.onWall))
+        # if wall == self.stage.bottomWall:
+        #     print('collided with bottom wall')
+        #     print('already on bottom wall: ' + str(wall in self.onWall))
         if wall not in self.onWall and not self.frozen:
             if self.health <= 0:
-                print('hit wall with 0 health')
-                print(self.onWall)
+                # print('hit wall with 0 health')
+                # print(self.onWall)
                 if wall == self.stage.bottomWall:
-                    print('bottom wall hit')
+                    # print('bottom wall hit')
                     self.currSprite = self.finalSprite
                     self.fallingToDeath = False
                     self.endTimer = 0
@@ -464,8 +477,8 @@ class Char(pygame.sprite.Sprite):
 
             self.xVelocity = 0
             self.yVelocity = 0  # the character stops moving
-            if wall == self.stage.bottomWall:
-                print('hit bottom wall and stopped moving')
+            # if wall == self.stage.bottomWall:
+            #     print('hit bottom wall and stopped moving')
             self.canAct = True
 
             if self.currMove is not None and not isinstance(self.currMove, Jump):
@@ -511,6 +524,8 @@ class Char(pygame.sprite.Sprite):
                 if wall == self.stage.walls[3]:
                     print('On down wall')
 
+            self.boostCount = 2
+
     def leaveWall(self):
         self.leavingWall = self.onWall
 
@@ -538,42 +553,41 @@ class Char(pygame.sprite.Sprite):
             self.leaveWall()
 
     def hit(self, hitbox):  # get hit
-        if self.health <= 0:
-            print('no hitting should be occurring')
-        self.health -= hitbox.damage  # take the appropriate amount of damage
+        if self.health > 0:
+            self.health -= hitbox.damage  # take the appropriate amount of damage
 
-        # update the health bar
-        self.healthBar = pygame.Rect(0, 0, self.dims[0] * self.health / self.startingHealth, HEALTH_BAR_WIDTH)
+            # update the health bar
+            self.healthBar = pygame.Rect(0, 0, self.dims[0] * self.health / self.startingHealth, HEALTH_BAR_WIDTH)
 
-        # Maybe change to: use the centers of each rectangle to determine the general direction the character will be sent in
-        #  (i.e. the sign of the x and y velocity)
-        #  the character will be sent in the opposite direction of the hurtbox
-        #  the magnitude of the x and y velocity will be determined by the knockback and knockback angle of the hitbox
-        # TODO: change how mass affects knockback
-        if not self.onWall:
-            if hitbox.char.lookingLeft:
-                self.xVelocity = -1 * math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
-            else:
-                self.xVelocity = math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
-            self.yVelocity = -1 * math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
+            # Maybe change to: use the centers of each rectangle to determine the general direction the character will be sent in
+            #  (i.e. the sign of the x and y velocity)
+            #  the character will be sent in the opposite direction of the hurtbox
+            #  the magnitude of the x and y velocity will be determined by the knockback and knockback angle of the hitbox
+            # TODO: change how mass affects knockback
+            if not self.onWall:
+                if hitbox.char.lookingLeft:
+                    self.xVelocity = -1 * math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
+                else:
+                    self.xVelocity = math.cos(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
+                self.yVelocity = -1 * math.sin(math.radians(hitbox.angle)) * hitbox.knockback * self.mass
 
-        # if hitbox.angle == 45:
-        #     print('looking left: ' + str(hitbox.char.lookingLeft))
-        #     print('cosine: ' + str(math.cos(math.radians(hitbox.angle))))
-        #     print('x velocity: ' + str(self.xVelocity))
+            # if hitbox.angle == 45:
+            #     print('looking left: ' + str(hitbox.char.lookingLeft))
+            #     print('cosine: ' + str(math.cos(math.radians(hitbox.angle))))
+            #     print('x velocity: ' + str(self.xVelocity))
 
-        if self.hitstun != -1:
-            print('Combo!')
-            # print('Hitstun: %d' % self.hitstun)
+            if self.hitstun != -1:
+                print('Combo!')
+                # print('Hitstun: %d' % self.hitstun)
 
-        self.canAct = False
-        self.hitstun = int(hitbox.knockback * HITSTUN_CONSTANT)
+            self.canAct = False
+            self.hitstun = int(hitbox.knockback * HITSTUN_CONSTANT)
 
-        if self.currMove is not None:
-            self.currMove.end()
+            if self.currMove is not None:
+                self.currMove.end()
 
-        # print('Knockback: %d, Angle: %d, Damage: %d' % (hitbox.knockback, hitbox.angle, hitbox.damage))
-        # print('Is currmove: ' + str(hitbox.move == self.game.playChars[0].currMove))
+            # print('Knockback: %d, Angle: %d, Damage: %d' % (hitbox.knockback, hitbox.angle, hitbox.damage))
+            # print('Is currmove: ' + str(hitbox.move == self.game.playChars[0].currMove))
 
     def move(self, x, y):
         self.pos = (self.pos[0] + x, self.pos[1] + y)
@@ -679,6 +693,8 @@ class Char(pygame.sprite.Sprite):
         # print('x velocity: ' + str(self.xVelocity))
         # print('y velocity: ' + str(self.yVelocity))
 
+        # if the direction of the boost is a different direction than the character is moving, the character stops
+        # moving before the boost and gets a more powerful boost
         if math.copysign(1, xBoost) != math.copysign(1, self.xVelocity):
             print('x opposite')
             self.xVelocity = 0
@@ -692,10 +708,12 @@ class Char(pygame.sprite.Sprite):
         self.xVelocity += xBoost
         self.yVelocity += yBoost
 
+        self.boostCount -= 1
+
         self.unfreeze()
 
     def freeze(self):
-        print('frozen')
+        # print('frozen')
         self.frozen = True
         # self.xVelocity = 0
         # self.yVelocity = 0
@@ -707,6 +725,18 @@ class Char(pygame.sprite.Sprite):
 
     def die(self):
         self.deathAnimation.start()
+
+    def collidesWith(self, wall):
+        if wall == self.stage.leftWall:
+            # print('left wall collision')
+            return self.rect.x <= wall.x + wall.w
+        if wall == self.stage.topWall:
+            return self.rect.y <= wall.y + wall.h
+        if wall == self.stage.bottomWall:
+            return self.rect.y + self.rect.h >= wall.y
+        if wall == self.stage.rightWall:
+            return self.rect.x + self.rect.w >= wall.x
+        return False
 
 def distance(rect1, rect2):
     right1 = rect1.x + rect1.w

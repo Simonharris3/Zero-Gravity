@@ -79,47 +79,40 @@ class Stage:
 
         sides = []
 
-        i = 0
         for wall in walls:
-            # if char == self.playChars[0] and len(walls) > 1:
-            #     if wall == self.walls[0]:
-            #         print('Wall %d: left wall' % i)
-            #     if wall == self.walls[1]:
-            #         print('Wall %d: up wall' % i)
-            #     if wall == self.walls[2]:
-            #         print('Wall %d: right wall' % i)
-            #     if wall == self.walls[3]:
-            #         print('Wall %d: down wall' % i)
-
-            if wall.x + wall.w - 1 <= char.pos[0]:
-                sides.append('right')  # character is on the right side of the wall
-            elif wall.x <= char.pos[0] < wall.x + wall.w - 1:
-                if wall.y + wall.h - 1 <= char.pos[1]:
-                    sides.append('down')  # character is below the wall
-                elif char.pos[1] < wall.y:
-                    sides.append('up')  # character is above the wall
-                else:
-                    char.center = ((char.pos[0] + char.dims[0]) / 2, (char.pos[1] + char.dims[1]) / 2)
-                    r = wall.x + wall.w - 1 - char.center[0]  # how close a character is to the right side of the wall
-                    l = char.center[0] - wall.x  # ' ' left side
-                    t = char.center[1] - wall.y  # ' ' top
-                    b = wall.y + wall.h - 1 - char.center[1]  # ' ' bottom
-
-                    if min(r, l, t, b) == r:
-                        sides.append('right')
-                    elif min(r, l, t, b) == b:
-                        sides.append('down')
-                    elif min(r, l, t, b) == l:
-                        sides.append('left')
-                    else:
-                        sides.append('up')
-
-            else:  # char.pos[0] < wall.x
-                sides.append('left')  # character is on the left side of the wall
-
-            # print('Side: ' + sides[i])
-            # print('i: ' + str(i))
-            i += 1
+            if wall == self.leftWall:
+                sides.append('right')
+            elif wall == self.rightWall:
+                sides.append('left')
+            elif wall == self.topWall:
+                sides.append('down')
+            elif wall == self.bottomWall:
+                sides.append('up')
+            # if wall.x + wall.w - 1 <= char.pos[0]:
+            #     sides.append('right')  # character is on the right side of the wall
+            # elif wall.x <= char.pos[0] < wall.x + wall.w - 1:
+            #     if wall.y + wall.h - 1 <= char.pos[1]:
+            #         sides.append('down')  # character is below the wall
+            #     elif char.pos[1] < wall.y:
+            #         sides.append('up')  # character is above the wall
+            #     else:
+            #         char.center = ((char.pos[0] + char.dims[0]) / 2, (char.pos[1] + char.dims[1]) / 2)
+            #         r = wall.x + wall.w - 1 - char.center[0]  # how close a character is to the right side of the wall
+            #         l = char.center[0] - wall.x  # ' ' left side
+            #         t = char.center[1] - wall.y  # ' ' top
+            #         b = wall.y + wall.h - 1 - char.center[1]  # ' ' bottom
+            #
+            #         if min(r, l, t, b) == r:
+            #             sides.append('right')
+            #         elif min(r, l, t, b) == b:
+            #             sides.append('down')
+            #         elif min(r, l, t, b) == l:
+            #             sides.append('left')
+            #         else:
+            #             sides.append('up')
+            #
+            # else:  # char.pos[0] < wall.x
+            #     sides.append('left')  # character is on the left side of the wall
 
         return sides
 

@@ -1,4 +1,5 @@
 # TODO List:
+#          Make game work on wii
 #          Default sprite when move becomes inactive
 #          "Active frame" for throws
 #          Allow characters to change direction at will
@@ -7,29 +8,27 @@
 #          Character get stunned when their tether collides with an attack
 #          Comment
 #          Re-implement keyboard movement
-#          Limit boost freeze time
 #          Allow any port for controller
-#          Detect when a character is not in the stage walls
 
 # TODO future:
-#       Wall attack
+#       Wall attack and wall walking
 #       Allow tethers to be angled and to snap to the wall
 #       Prevent attacks while frozen from boost
-#       Allow walking on walls
 #       Relax jumping constraints
 #       Select stage + character with controller
 #       Make characters bigger?
 #       Make it look prettier, including images
 #       Add new characters
+#
 
 # TODO stretch:
 #       Handle character collision
 #       Add new stages
+#       Better wall collision detection
 
 # TODO: bugs
 #       If a character hits a wall before the throw is over, the throw doesn't happen
 #       If robotnik dies on the bottom wall, the final sprite doesn't show up
-#       Characters can slip through or slide along the wall if they are near the corner
 
 import time
 import pygame.key
@@ -92,6 +91,7 @@ DEAD_ZONE = 0.3
 DIAG_DEAD_ZONE = 0.15
 SINGLE_DIRECTION_BUFFER = 0.2
 
+BOOST_PAUSE = 30
 
 class ZeroGravity:
     def __init__(self):
@@ -159,18 +159,24 @@ class ZeroGravity:
 
         # self.screen.fill(pygame.Color('Red'), pygame.Rect(0,0,50,50))
 
-        self.controls = 'joystick'
+        #self.controls = 'joystick'
+        self.controls = 'keyboard'
 
         pygame.joystick.init()
-        joysticks = []
+        self.controllers = []
 
         for i in range(pygame.joystick.get_count()):
-            joysticks.append(pygame.joystick.Joystick(i))
+            self.controllers.append(pygame.joystick.Joystick(i))
 
-        self.controller = joysticks[4]
-        self.controller.init()
-        print('Controller name: %s' % (self.controller.get_name()))
-        print('Number of axes: %d' % (self.controller.get_numaxes()))
+        #self.p1controls = self.controllers[1]
+        #self.p2controls = self.controllers[0]
+        #self.p1controls.init()
+        #self.p2controls.init()
+        # self.controllers[4].init()
+        # self.controllers[2].init()
+        # self.controllers[3].init()
+        # print('Controller name: %s' % (self.p1controls.get_name()))
+        # print('Number of axes: %d' % (self.p1controls.get_numaxes()))
 
     def mainLoop(self, fps):
         self.running = True
@@ -227,117 +233,125 @@ class ZeroGravity:
             # elif event.type == pygame.MOUSEMOTION:
             # self.mouseMotion(event.buttons, event.pos, event.rel) #if the mouse was moved, do the associated action
             elif event.type == pygame.JOYAXISMOTION:
-                control_x = self.controller.get_axis(CONTROL_STICK_HORIZONTAL)
-                control_y = self.controller.get_axis(CONTROL_STICK_VERTICAL)
-                c_x = self.controller.get_axis(C_STICK_HORIZONTAL)
-                c_y = self.controller.get_axis(C_STICK_VERTICAL)
-                self.joystickMoved(control_x, control_y, c_x, c_y)
+                controller = self.controllers[event.joy]
+                control_x = controller.get_axis(CONTROL_STICK_HORIZONTAL)
+                control_y = controller.get_axis(CONTROL_STICK_VERTICAL)
+                c_x = controller.get_axis(C_STICK_HORIZONTAL)
+                c_y = controller.get_axis(C_STICK_VERTICAL)
+                self.joystickMoved(controller, control_x, control_y, c_x, c_y)
                 # if control_x > 0.1 or control_x < -0.1 or control_y > 0.1 or control_y < -0.1:
                 #     print('Control stick values: (%f, %f)' % (control_x, control_y))
             elif event.type == pygame.JOYBUTTONUP:
                 # print('button pressed')
-                self.buttonUp(event.button)
+                print('controller: ' + str(event.joy))
+                controller = self.controllers[event.joy]
+                self.buttonUp(controller, event.button)
 
-    def joystickMoved(self, controlX, controlY, cStickX, cStickY):
+    def joystickMoved(self, controller, controlX, controlY, cStickX, cStickY):
         # print('Status: ' + self.status)
         # print('Controls: ' + self.controls)
         if self.status == 'in game' and self.controls == 'joystick':  # if a game is being played
-            char1 = self.playChars[0]
+            if controller == self.p1controls:
+                char = self.playChars[0]
+            else:
+                char = self.playChars[1]
             # print('control stick angle: %d' % joystickAngle(controlX, controlY))
-            walls = char1.onWall  # the wall(s) player 1's character is on
+            walls = char.onWall  # the wall(s) player 1's character is on
             cDirection = joystickDirection(cStickX, cStickY)
             controlDirection = joystickDirection(controlX, controlY)
             angle = joystickAngle(controlX, controlY)
 
             if walls:  # if player 1's character is on a wall and a direction is inputted,
                 # if the player angles away from the wall, that character jumps off the wall
-                if self.stage.checkWalls(angle, walls, char1):
+                if self.stage.checkWalls(angle, walls, char):
                     # print('Joystick angle: ' + str(joystickAngle(controlX, controlY)))
-                    char1.startJump(angle)
+                    char.startJump(angle)
 
             else:
                 if cDirection == 'left':  # if left was inputted
-                    if char1.lookingLeft:
-                        char1.forwardA()
+                    if char.lookingLeft:
+                        char.forwardA()
                     else:
-                        char1.backA()
+                        char.backA()
                 elif cDirection == 'up':  # if up was inputted
-                    char1.upA()  # do an up a
+                    char.upA()  # do an up a
                 elif cDirection == 'down':  # if down was inputted
-                    char1.downA()  # do a down a
+                    char.downA()  # do a down a
                 elif cDirection == 'right':  # if right was inputted
-                    if char1.lookingLeft:
-                        char1.backA()  # do a back a
+                    if char.lookingLeft:
+                        char.backA()  # do a back a
                     else:
-                        char1.forwardA()  # do a forward a
+                        char.forwardA()  # do a forward a
 
-            if char1.grabbing is not None:
-                char1.throw(controlDirection)
-            elif char1.frozen and angle != -1:
-                char1.boost(angle)
+            if char.grabbing is not None:
+                char.throw(controlDirection)
+            elif char.frozen and angle != -1:
+                char.boost(angle)
 
     # determines what happens when a button is pressed
-    def buttonUp(self, button):
+    def buttonUp(self, controller, button):
         # for i in range(4):
-        #     print('Controller axis %d: %d' % (i, self.controller.get_axis(i)))
-
+        #     print('Controller axis %d: %d' % (i, self.p1controls.get_axis(i)))
         # Player 1: directions--WASD, jump--joystick, A attack--a, B attack--b.
         # Player 2: directions--p, l, ;, and ', jump--right alt, A attack--right shift, B attack--right enter.
         if self.status == 'in game':  # if a game is being played
-            char1 = self.playChars[0]
+            if controller == self.p1controls:
+                char = self.playChars[0]
+            else:
+                char = self.playChars[1]
             if button == X_BUTTON:
                 # print('can be frozen')
-                char1.unfreezing = False
+                char.unfreezing = False
             if button == L_BUTTON or button == R_BUTTON:
-                char1.shielding = False
-            if not char1.onWall:
-                direction = joystickDirection(self.controller.get_axis(CONTROL_STICK_HORIZONTAL),
-                                              self.controller.get_axis(CONTROL_STICK_VERTICAL))
+                char.shielding = False
+            if not char.onWall:
+                direction = joystickDirection(controller.get_axis(CONTROL_STICK_HORIZONTAL),
+                                              controller.get_axis(CONTROL_STICK_VERTICAL))
 
                 if button == A_BUTTON:
                     # if a was pressed and player 1's character is not on a wall
                     if direction == 'left':  # if left was inputted
-                        if char1.lookingLeft:
-                            char1.forwardA()
+                        if char.lookingLeft:
+                            char.forwardA()
                         else:
-                            char1.backA()
+                            char.backA()
                     elif direction == 'up':  # if up was inputted
-                        char1.upA()  # do an up a
+                        char.upA()  # do an up a
                     elif direction == 'down':  # if down was inputted
-                        char1.downA()  # do a down a
+                        char.downA()  # do a down a
                     elif direction == 'right':  # if right was inputted
-                        if char1.lookingLeft:
-                            char1.backA()  # do a back a
+                        if char.lookingLeft:
+                            char.backA()  # do a back a
                         else:
-                            char1.forwardA()  # do a forward a
+                            char.forwardA()  # do a forward a
                     else:  # if no directions were inputted with the a
-                        char1.neutralA()  # do a neutral a
+                        char.neutralA()  # do a neutral a
 
                 if button == B_BUTTON:
                     # if b was pressed and player 1's character is not on a wall
                     if direction == 'left':  # if left was inputted
-                        if char1.lookingLeft:
-                            char1.forwardB()
+                        if char.lookingLeft:
+                            char.forwardB()
                         else:
-                            char1.backB()
+                            char.backB()
                     elif direction == 'up':  # if up was inputted
-                        char1.upB()  # do an up b
+                        char.upB()  # do an up b
                     elif direction == 'down':  # if down was inputted
-                        char1.downB()  # do a down b
+                        char.downB()  # do a down b
                     elif direction == 'right':  # if right was inputted
-                        if char1.lookingLeft:
-                            char1.backB()  # do a back b
+                        if char.lookingLeft:
+                            char.backB()  # do a back b
                         else:
-                            char1.forwardB()  # do a forward b
+                            char.forwardB()  # do a forward b
                     else:  # if no directions were inputted with the b
-                        char1.neutralB()  # do a neutral b
+                        char.neutralB()  # do a neutral b
 
                 if button == X_BUTTON and self.playChars[0].frozen:
                     self.playChars[0].frozen = False
 
                 if button == Z_BUTTON:
                     print('tether performed')
-                    char1.tether()
+                    char.tether()
 
     def keyUp(self, keys):  # determines what happens when a key is released
         pass
@@ -395,20 +409,41 @@ class ZeroGravity:
                     # print('drift: %f' % angle)
 
     def buttonHeld(self):
-        for i in range(self.controller.get_numbuttons()):
+        for i in range(self.p1controls.get_numbuttons()):
             if self.status == 'in game':  # if a game is being played
                 char1 = self.playChars[0]
-                # if self.controller.get_button(i) and i == X_BUTTON:
+                # if self.p1controls.get_button(i) and i == X_BUTTON:
                 #     print('unfreezing: ' + str(char1.unfreezing))
-                if not char1.onWall and i == X_BUTTON and self.controller.get_button(i) and not char1.unfreezing:
-                    char1.freeze()
+                if not char1.onWall and i == X_BUTTON and self.p1controls.get_button(i) and not char1.unfreezing:
+                    if char1.boostCount > 0:
+                        if not char1.frozen:
+                            char1.freeze()
+                            char1.freezeTimer = BOOST_PAUSE
 
-                if (i == L_BUTTON and self.controller.get_button(i)) or \
-                        (i == R_BUTTON and self.controller.get_button(i)):
-                    angle = joystickAngle(self.controller.get_axis(CONTROL_STICK_HORIZONTAL),
-                                          self.controller.get_axis(CONTROL_STICK_VERTICAL))
+                if (i == L_BUTTON and self.p1controls.get_button(i)) or \
+                        (i == R_BUTTON and self.p1controls.get_button(i)):
+                    angle = joystickAngle(self.p1controls.get_axis(CONTROL_STICK_HORIZONTAL),
+                                          self.p1controls.get_axis(CONTROL_STICK_VERTICAL))
                     char1.shield(angle)
                     char1.shielding = True
+
+        for i in range(self.p2controls.get_numbuttons()):
+            if self.status == 'in game':  # if a game is being played
+                char2 = self.playChars[1]
+                # if self.p1controls.get_button(i) and i == X_BUTTON:
+                #     print('unfreezing: ' + str(char1.unfreezing))
+                if not char2.onWall and i == X_BUTTON and self.p2controls.get_button(i) and not char2.unfreezing:
+                    if char2.boostCount > 0:
+                        if not char2.frozen:
+                            char2.freeze()
+                            char2.freezeTimer = BOOST_PAUSE
+
+                if (i == L_BUTTON and self.p2controls.get_button(i)) or \
+                        (i == R_BUTTON and self.p2controls.get_button(i)):
+                    angle = joystickAngle(self.p2controls.get_axis(CONTROL_STICK_HORIZONTAL),
+                                          self.p2controls.get_axis(CONTROL_STICK_VERTICAL))
+                    char2.shield(angle)
+                    char2.shielding = True
 
     # TODO: implement joystick for both players
 
@@ -437,8 +472,9 @@ class ZeroGravity:
 
     def update(self):  # update the screen to the next frame
         self.keyHeld(pygame.key.get_pressed())  # perform actions based on keys held down
-        self.buttonHeld()
-        self.joystickHeld(self.controller.get_axis(0), self.controller.get_axis(1))
+        #self.buttonHeld()
+        #self.joystickHeld(self.p1controls.get_axis(0), self.p1controls.get_axis(1))
+        #self.joystickHeld(self.p2controls.get_axis(0), self.p2controls.get_axis(1))
 
         for char in self.playChars:  # update each character
             char.update()
